@@ -1,14 +1,8 @@
-
-
-
-
-
-
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import { Card } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 
-const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick }) => {
+const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick, onAssignAgentClick }) => {
   const navigate = useNavigate();
   const { tenantSlug } = useParams();
 
@@ -77,12 +71,21 @@ const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick }) => {
                   <button 
                     className="btn btn-sm btn-light me-2"
                     onClick={() => onEditClick(apartment)}
+                    title="Edit Apartment"
                   >
                     <IconifyIcon icon="bx:edit" />
                   </button>
                   <button 
+                    className="btn btn-sm btn-light me-2"
+                    onClick={() => onAssignAgentClick(apartment)}
+                    title="Assign Agent"
+                  >
+                    <IconifyIcon icon="bx:user-plus" />
+                  </button>
+                  <button 
                     className="btn btn-sm btn-light text-danger"
                     onClick={() => onDeleteClick(apartment)}
+                    title="Delete Apartment"
                   >
                     <IconifyIcon icon="bx:trash" />
                   </button>

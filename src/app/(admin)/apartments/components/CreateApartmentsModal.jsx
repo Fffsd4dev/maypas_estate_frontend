@@ -266,7 +266,7 @@ const CreateApartmentsModal = ({
                   <option value="">Select Category</option>
                   {categories.map(category => (
                     <option key={category.uuid} value={category.uuid}>
-                      {category.name} {category.uuid === formData.category_uuid ? '(Current)' : ''}
+                      {category.name}
                     </option>
                   ))}
                 </Form.Select>
@@ -289,7 +289,7 @@ const CreateApartmentsModal = ({
                   <option value="">Select Landlord</option>
                   {landlords.map(landlord => (
                     <option key={landlord.id} value={landlord.id}>
-                      {landlord.name} {landlord.id === parseInt(formData.landlord_id) ? '(Current)' : ''}
+                      {landlord.name}
                     </option>
                   ))}
                 </Form.Select>

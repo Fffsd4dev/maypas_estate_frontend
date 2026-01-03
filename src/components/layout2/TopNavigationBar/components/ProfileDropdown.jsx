@@ -90,7 +90,7 @@ const ProfileDropdown = () => {
         </span>
       </DropdownToggle>
       <DropdownMenu>
-        <DropdownHeader as="h6">Welcome {user.user.first_name || 'User'}!</DropdownHeader>
+        <DropdownHeader as="h6">Welcome {user.first_name || 'User'}!</DropdownHeader>
         {/* <DropdownItem as={Link} to="/pages/profile">
           <IconifyIcon icon="bx:user-circle" className="text-muted fs-18 align-middle me-1" />
           <span className="align-middle">Profile</span>

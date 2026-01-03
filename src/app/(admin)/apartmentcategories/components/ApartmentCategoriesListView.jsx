@@ -11,7 +11,7 @@ const ApartmentCategoriesListView = ({ categories, onEditClick, onDeleteClick })
               <th>S/N</th>
               <th>Category Name</th>
               <th>Description</th>
-              <th>UUID</th>
+              {/* <th>UUID</th> */}
               <th>Actions</th>
             </tr>
           </thead>
@@ -27,9 +27,9 @@ const ApartmentCategoriesListView = ({ categories, onEditClick, onDeleteClick })
                 <td>
                   <span className="text-muted">{category.description || 'No description'}</span>
                 </td>
-                <td>
+                {/* <td>
                   <span className="text-muted small">{category.uuid}</span>
-                </td>
+                </td> */}
                 <td>
                   <button 
                     className="btn btn-sm btn-light me-2"

@@ -8,6 +8,8 @@ import { Navigate } from 'react-router-dom';
 // Dashboard Routes
 const Analytics = lazy(() => import('@/app/(admin)/dashboard/analytics/page'));
 const Finance = lazy(() => import('@/app/(admin)/dashboard/finance/page'));
+const LandlordDashboard = lazy(() => import('@/app/(admin)/dashboard/landlordDashboard/page'));
+const TenantDashboard = lazy(() => import('@/app/(admin)/dashboard/tenantDashboard/page'));
 const Sales = lazy(() => import('@/app/(admin)/dashboard/sales/page'));
 const IconaMoonIcons = lazy(() => import('@/app/(admin)/icons/iconamoon/page'));
 const Invoices = lazy(() => import('@/app/(admin)/invoices/page'));
@@ -23,16 +25,19 @@ const ApartmentCategories = lazy(() => import('@/app/(admin)/apartmentcategories
 const ApartmentAmenities = lazy(() => import('@/app/(admin)/apartmentamenities/page'));
 const ApartmentSpeciality = lazy(() => import('@/app/(admin)/apartmentspeciality/page'));
 const Landlords = lazy(() => import('@/app/(admin)/landlords/page'));
+const Agents = lazy(() => import('@/app/(admin)/agents/page'));
 const Apartments = lazy(() => import('@/app/(admin)/apartments/page'));
 const Tenants = lazy(() => import('@/app/(admin)/tenants/page'));
 const RentManagers = lazy(() => import('@/app/(admin)/rentmanagers/page'));
 const Technicians = lazy(() => import('@/app/(admin)/technicians/page'));
+const Notification = lazy(() => import('@/app/(admin)/notifications/page'));
 const ChargesApartment = lazy(() => import('@/app/(admin)/charges/page'));
 const Charges = lazy(() => import('@/app/(admin)/charges/ApartmentCharges'));
 const Complaints = lazy(() => import('@/app/(admin)/complaints/page'));
 const TenantComplaints = lazy(() => import('@/app/(admin)/tenantcomplaints/page'));
 const Maintenance = lazy(() => import('@/app/(admin)/maintenance/page'));
 const MaintenanceComplaints = lazy(() => import('@/app/(admin)/maintenancecomplaints/page'));
+const Documents = lazy(() => import('@/app/(admin)/documents/page'));
 
 // Not Found Routes
 const NotFound = lazy(() => import('@/app/(other)/(error-pages)/error-404/page'));
@@ -88,14 +93,19 @@ const generalRoutes = [{
   element: withSuspense(Analytics),
   isPublic: false
 }, {
-  path: '/dashboard/finance',
+  path: '/dashboard',
   name: 'Finance',
   element: withSuspense(Finance),
   isPublic: false
 }, {
-  path: '/:tenantSlug/dashboard/finance',
+  path: '/:tenantSlug/dashboard',
   name: 'Finance',
-  element: withSuspense(Finance),
+  element: withSuspense(LandlordDashboard),
+  isPublic: false
+}, {
+  path: '/:tenantSlug/tenant-dashboard',
+  name: 'Finance',
+  element: withSuspense(TenantDashboard),
   isPublic: false
 }, {
   path: '/dashboard/sales',
@@ -160,6 +170,18 @@ const tenantRoutes = [{
   element: withSuspense(Landlords),
   isPublic: false,
   roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
+  name: 'Agents',
+  path: '/:tenantSlug/accounts/agents',
+  element: withSuspense(Agents),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
+  name: 'Create Form',
+  path: '/:tenantSlug/landlordforms/createtemplate',
+  element: withSuspense(Documents),
+  isPublic: false,
+  roles: ['admin', 'landlord'] // Example role-based access
 }, {
   name: 'Estate Managers',
   path: '/:tenantSlug/accounts/tenants',
@@ -256,6 +278,12 @@ const tenantRoutes = [{
   element: withSuspense(InvoiceDetailPage),
   isPublic: false,
   roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
+  name: 'notification',
+  path: '/:tenantSlug/notification',
+  element: withSuspense(Notification),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
 }];
 
 export const authRoutes = [{
@@ -269,11 +297,11 @@ export const authRoutes = [{
   path: '/auth/sign-in-2',
   element: withSuspense(AuthSignIn2),
   isPublic: true
-}, {
-  name: 'Sign Up',
-  path: '/:tenantSlug/auth/sign-up',
-  element: withSuspense(AuthSignUp),
-  isPublic: true
+// }, {
+//   name: 'Sign Up',
+//   path: '/:tenantSlug/auth/sign-up',
+//   element: withSuspense(AuthSignUp),
+//   isPublic: true
 }, {
   name: 'Sign Up',
   path: '/:tenantSlug/auth/sign-up',

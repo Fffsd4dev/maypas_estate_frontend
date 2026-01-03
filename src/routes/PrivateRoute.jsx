@@ -38,18 +38,8 @@ const PrivateRoute = ({ children, roles = [] }) => {
     }
   }
 
-  // console.log('User:', user.user.first_name);
-  // console.log('User type:', user?.userType);
-
   // Determine which layout to use based on user role
   const getLayout = () => {
-    // Check if user has admin roles (system admin or normal admin)
-    // const isAdmin = user?.roles?.some(role => 
-    //   role === 'system_admin' || role === 'normal_admin'
-    // );
-    
-    // if (isAdmin) {
-    //   return <AdminLayout>{children}</AdminLayout>;
     // }
     
     // For non-admin users with tenantSlug, use UserLayout

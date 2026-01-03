@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import { Card, CardBody, Col, Row, Modal, Button, Alert, Spinner, Pagination } from 'react-bootstrap';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
@@ -11,6 +9,7 @@ import axios from 'axios';
 const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAssignAgentModal, setShowAssignAgentModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedApartment, setSelectedApartment] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +18,14 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
   const [success, setSuccess] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { user } = useAuthContext();
+
+  // New states for agent assignment
+  const [agents, setAgents] = useState([]);
+  const [selectedAgentUuid, setSelectedAgentUuid] = useState('');
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState(null);
+  const [assignSuccess, setAssignSuccess] = useState(false);
+  const [loadingAgents, setLoadingAgents] = useState(false);
 
   const ITEMS_PER_PAGE = 15;
 
@@ -56,6 +63,129 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
   const handleDeleteClick = (apartment) => {
     setSelectedApartment(apartment);
     setShowDeleteModal(true);
+  };
+
+  // New handler for assign agent button click
+  const handleAssignAgentClick = async (apartment) => {
+    setSelectedApartment(apartment);
+    setSelectedAgentUuid('');
+    setAssignError(null);
+    setAssignSuccess(false);
+    setShowAssignAgentModal(true);
+    
+    // Fetch agents when modal opens
+    await fetchAgents();
+  };
+
+  // Updated function to fetch available agents with pagination handling
+  const fetchAgents = async () => {
+    try {
+      setLoadingAgents(true);
+      setAssignError(null);
+      
+      if (!user?.token) {
+        throw new Error('No authentication token found');
+      }
+
+      if (!tenantSlug) {
+        throw new Error('Tenant slug not found');
+      }
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/landlord/list-all`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Extract agents from the paginated response
+      const agentsData = response.data.data || [];
+      
+      // Transform agent data to combine first_name and last_name
+      const transformedAgents = agentsData.map(agent => ({
+        ...agent,
+        full_name: `${agent.first_name} ${agent.last_name}`.trim()
+      }));
+      
+      console.log('Fetched agents:', transformedAgents);
+      setAgents(transformedAgents);
+      
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+      setAssignError(error.response?.data?.message || 'Failed to load agents. Please try again.');
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  // Function to handle agent assignment
+  const handleAssignAgentConfirm = async () => {
+    setAssignLoading(true);
+    setAssignError(null);
+    setAssignSuccess(false);
+
+    try {
+      if (!user?.token) {
+        throw new Error('No authentication token found');
+      }
+
+      if (!tenantSlug) {
+        throw new Error('Tenant slug not found');
+      }
+
+      if (!selectedApartment?.uuid) {
+        throw new Error('No apartment selected');
+      }
+
+      if (!selectedAgentUuid) {
+        throw new Error('Please select an agent');
+      }
+
+      // Prepare the payload as specified
+      const payload = {
+        landlord_agent_uuid: selectedAgentUuid
+      };
+
+      // console.log('Assigning agent payload:', payload);
+      // console.log('Assigning to apartment UUID:', selectedApartment.uuid);
+
+      // Make the API call to assign agent
+      const response = await axios.patch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/assign-apartment/${selectedApartment.uuid}`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // console.log('Assignment response:', response.data);
+      setAssignSuccess('Agent assigned successfully!');
+      
+      // Refresh the apartments list to show updated information
+      setTimeout(() => {
+        refreshApartments();
+        setShowAssignAgentModal(false);
+        setAssignSuccess(false);
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error assigning agent:', error);
+      console.error('Error response:', error.response);
+      setAssignError(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        error.message || 
+        'Failed to assign agent. Please try again.'
+      );
+    } finally {
+      setAssignLoading(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -177,6 +307,12 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
     return <Pagination className="justify-content-center mt-3">{items}</Pagination>;
   };
 
+  // Helper function to find agent name by UUID
+  const getAgentName = (uuid) => {
+    const agent = agents.find(a => a.uuid === uuid);
+    return agent ? `${agent.first_name} ${agent.last_name}` : 'Unknown Agent';
+  };
+
   return (
     <>
       <Row>
@@ -227,6 +363,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
             apartments={paginatedApartments}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
+            onAssignAgentClick={handleAssignAgentClick}
           />
           {renderPagination()}
         </>
@@ -243,6 +380,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
         tenantSlug={tenantSlug}
       />
 
+      {/* Delete Apartment Modal */}
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Deletion</Modal.Title>
@@ -284,6 +422,100 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
               <>
                 <IconifyIcon icon="bx:trash" className="me-1" />
                 Delete
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Assign Agent Modal */}
+      <Modal show={showAssignAgentModal} onHide={() => setShowAssignAgentModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Assign Agent to Apartment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {assignError && (
+            <Alert variant="danger" onClose={() => setAssignError(null)} dismissible>
+              <IconifyIcon icon="bx:error" className="me-1" />
+              {assignError}
+            </Alert>
+          )}
+          
+          {assignSuccess && (
+            <Alert variant="success">
+              <IconifyIcon icon="bx:check-circle" className="me-1" />
+              {assignSuccess}
+            </Alert>
+          )}
+          
+          {!assignSuccess && selectedApartment && (
+            <>
+              <div className="mb-3">
+                <p><strong>Apartment Address:</strong> {selectedApartment.address}</p>
+                <p><strong>Location:</strong> {selectedApartment.location}</p>
+                <p><strong>Category:</strong> {selectedApartment.category_name || 'N/A'}</p>
+                {selectedApartment.assigned_agent_uuid && (
+                  <p className="text-warning">
+                    <strong>Currently Assigned Agent:</strong> {getAgentName(selectedApartment.assigned_agent_uuid)}
+                  </p>
+                )}
+              </div>
+              
+              <div className="mb-3">
+                <label className="form-label">Select New Agent *</label>
+                {loadingAgents ? (
+                  <div className="text-center py-3">
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Loading agents...
+                  </div>
+                ) : (
+                  <>
+                    <select 
+                      className="form-select"
+                      value={selectedAgentUuid}
+                      onChange={(e) => setSelectedAgentUuid(e.target.value)}
+                      disabled={assignLoading || agents.length === 0}
+                    >
+                      <option value="">-- Select an Agent --</option>
+                      {agents.map(agent => (
+                        <option key={agent.uuid} value={agent.uuid}>
+                          {agent.full_name} ({agent.email})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="form-text">
+                      {agents.length === 0 
+                        ? 'No agents available. Please ensure agents are registered.' 
+                        : `Select from ${agents.length} available agent(s)`}
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowAssignAgentModal(false)}
+            disabled={assignLoading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleAssignAgentConfirm}
+            disabled={assignLoading || !selectedAgentUuid || assignSuccess || agents.length === 0}
+          >
+            {assignLoading ? (
+              <>
+                <Spinner animation="border" size="sm" className="me-1" />
+                Assigning...
+              </>
+            ) : (
+              <>
+                <IconifyIcon icon="bx:user-check" className="me-1" />
+                {selectedApartment?.assigned_agent_uuid ? 'Reassign Agent' : 'Assign Agent'}
               </>
             )}
           </Button>

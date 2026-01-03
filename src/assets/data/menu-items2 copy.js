@@ -40,6 +40,12 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
     allowedUserTypes: ['landlord'],
     parentKey: 'users'
   }, {
+    key: 'account-agents',
+    label: 'Agents',
+    url: `/${tenantSlug}/accounts/agents`,
+    allowedUserTypes: ['landlord'],
+    parentKey: 'users'
+  }, {
     key: 'account-tenants',
     label: 'Tenants',
     url: `/${tenantSlug}/accounts/tenants`,

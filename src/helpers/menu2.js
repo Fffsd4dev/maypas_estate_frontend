@@ -8,6 +8,7 @@ import { MENU_ITEMS } from '@/assets/data/menu-items2';
 export const getMenuItems = () => {
   const { tenantSlug } = useParams();
   const { user } = useAuthContext(); // Get user from auth context
+  console.log('Generating menu for tenantSlug:', tenantSlug, 'and userType:', user?.userType);
   
   // If MENU_ITEMS is a function, call it with tenantSlug and userType
   if (typeof MENU_ITEMS === "function") {
@@ -92,3 +93,6 @@ export const findMenuItem = (menuItems, menuItemKey) => {
   }
   return null;
 };
+
+
+

@@ -6,23 +6,7 @@ export const MENU_ITEMS = [{
   key: 'dashboards',
   icon: 'iconamoon:category-duotone',
   label: 'Dashboards',
-  url: '/dashboard/finance',
-  // children: [{
-  //   key: 'dashboard-analytics',
-  //   label: 'Analytics',
-  //   url: '/dashboard/analytics',
-  //   parentKey: 'dashboards'
-  // }, {
-  //   key: 'dashboard-finance',
-  //   label: 'Finance',
-  //   url: '/dashboard/finance',
-  //   parentKey: 'dashboards'
-  // }, {
-  //   key: 'dashboard-sales',
-  //   label: 'Sales',
-  //   url: '/dashboard/sales',
-  //   parentKey: 'dashboards'
-  // }]
+  url: '/dashboard'
 }, {
   key: 'users',
   label: 'USERS',

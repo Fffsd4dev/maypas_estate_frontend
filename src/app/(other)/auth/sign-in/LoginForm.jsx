@@ -31,6 +31,19 @@ const LoginForm = () => {
     resolver: yupResolver(loginSchema)
   });
 
+  const getUserType = (userTypeId) => {
+    switch(userTypeId) {
+      case '1':
+        return 'landlord';
+      case '2':
+        return 'agent';
+      case '3':
+        return 'admin';
+      default:
+        return 'landlord'; // Default fallback
+    }
+  };
+
   const onSubmit = async (formData) => {
     setLoading(true);
     setError(null);
@@ -48,18 +61,34 @@ const LoginForm = () => {
         }
       );
 
-      // console.log('Landlord login response:', response.data);
+      console.log('Landlord login response:', response.data.landlord);
 
-      // If landlord login succeeds, redirect to landlord dashboard
+      // If landlord login succeeds, redirect based on user type
       if (response.data) {
+        const userTypeId = response.data.landlord?.user_type_id;
+        const userType = getUserType(userTypeId);
+        // console.log({ userTypeId, userTypeId });
+        
         const sessionData = {
           token: response.data.token,
           user: response.data.landlord || response.data.tenant,
-          userType: 'landlord'
+          userType: userType,
+          userTypeId: userTypeId // Optional: store the ID if needed
         };
 
         saveSession(sessionData);
-        navigate(`/${tenantSlug}/dashboard/finance`);
+        
+        // Redirect based on user type
+        if (userType === 'landlord') {
+          navigate(`/${tenantSlug}/dashboard`);
+        } else if (userType === 'agent') {
+          navigate(`/${tenantSlug}/dashboard`);
+        } else if (userType === 'admin') {
+          navigate(`/${tenantSlug}/dashboard`);
+        } else {
+          // Fallback to landlord dashboard
+          navigate(`/${tenantSlug}/dashboard`);
+        }
       }
 
     } catch (landlordError) {
@@ -84,7 +113,7 @@ const LoginForm = () => {
           };
 
           saveSession(sessionData);
-          navigate(`/${tenantSlug}/dashboard/finance`);
+          navigate(`/${tenantSlug}/tenant-dashboard`);
         }
       } catch (tenantError) {
         // Both logins failed

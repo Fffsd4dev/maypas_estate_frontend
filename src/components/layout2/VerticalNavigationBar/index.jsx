@@ -1,18 +1,113 @@
-import { lazy, Suspense } from 'react';
+
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import FallbackLoading from '@/components/FallbackLoading';
-import LogoBox from '@/components/LogoBox';
 import SimplebarReactClient from '@/components/wrappers/SimplebarReactClient';
 import { getMenuItems } from '@/helpers/menu2';
 import HoverMenuToggle from './components/HoverMenuToggle';
+
 const AppMenu = lazy(() => import('./components/AppMenu'));
+
 const VerticalNavigationBar = () => {
+  const { tenantSlug } = useParams(); // Get tenantSlug from URL
+  const [branding, setBranding] = useState(null);
+  const [loading, setLoading] = useState(true);
   const menuItems = getMenuItems();
-  return <div className="main-nav" id="leftside-menu-container">
-      <LogoBox containerClassName="logo-box" squareLogo={{
-      className: 'logo-sm'
-    }} textLogo={{
-      className: 'logo-lg'
-    }} />
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      if (!tenantSlug) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `https://trial.maypaspace.com/api/${tenantSlug}/get/brand/data`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Access the logo from data.data.logo (since logo is inside data.data)
+          setBranding(data.data || data); // Handle both nested structure or direct
+          console.log('Fetched branding data:', data.data || data);
+        } else {
+          console.warn('No branding found or error fetching branding');
+        }
+      } catch (error) {
+        console.error('Error fetching branding:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBranding();
+  }, [tenantSlug]);
+
+  if (loading) {
+    return <FallbackLoading />;
+  }
+
+  // Extract logo and name from the API response structure
+  // branding contains the 'data' object from the response
+  const logoUrl = branding?.logo;
+  const tenantName = branding?.name || 'Tenant';
+
+  return (
+    <div className="main-nav" id="leftside-menu-container">
+      {/* Logo section - simple image */}
+      <div className="logo-box" style={{ padding: '20px 24px', textAlign: 'center' }}>
+        <a href="/" style={{ display: 'inline-block' }}>
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={tenantName}
+              style={{ 
+                maxHeight: '40px',
+                height: 'auto',
+                width: 'auto',
+                maxWidth: '100%',
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                // Fallback if image fails to load
+                console.error('Logo failed to load:', logoUrl);
+                e.target.style.display = 'none';
+                const parent = e.target.parentElement;
+                if (parent) {
+                  parent.innerHTML = `<div style="
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #333;
+                    background: #f5f5f5;
+                    border-radius: 4px;
+                    padding: 0 16px;
+                  ">${tenantName}</div>`;
+                }
+              }}
+            />
+          ) : (
+            <div style={{
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#333',
+              background: '#f5f5f5',
+              borderRadius: '4px',
+              padding: '0 16px'
+            }}>
+              {tenantName}
+            </div>
+          )}
+        </a>
+      </div>
 
       <HoverMenuToggle />
 
@@ -21,6 +116,8 @@ const VerticalNavigationBar = () => {
           <AppMenu menuItems={menuItems} />
         </Suspense>
       </SimplebarReactClient>
-    </div>;
+    </div>
+  );
 };
+
 export default VerticalNavigationBar;
