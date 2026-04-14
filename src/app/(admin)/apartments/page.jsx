@@ -1,4 +1,3 @@
-
 import PageBreadcrumb from '@/components/layout/PageBreadcrumb';
 import PageMetaData from '@/components/PageTitle';
 import ApartmentsList from './components/ApartmentsList';
@@ -34,13 +33,22 @@ const Apartments = () => {
         }
       );
 
-      if (response.data) {
+      if (response.data.data) {
         // Flatten the nested structure into a single array of apartments
-        const flattenedApartments = response.data.flatMap(category => 
+        const flattenedApartments = response.data.data.flatMap(category => 
           category.apartments.map(apartment => ({
             ...apartment,
             category_name: category.name,
-            category_description: category.description
+            category_description: category.description,
+            category_uuid: category.uuid || category.id,
+            location: apartment.location?.name || 'N/A',
+            location_uuid: apartment.location_id,
+            landlord_name: apartment.land_lord?.name || 'NOT ASSIGNED',
+            landlord_id: apartment.landlord_id,
+            number_item: parseInt(apartment.number_apartment_units) || 1,
+            assigned_agent_uuid: apartment.assigned_agent_uuid || null,
+            land_lord: apartment.land_lord,
+            estate_manager: apartment.estate_manager
           }))
         );
         setApartments(flattenedApartments);
@@ -54,7 +62,7 @@ const Apartments = () => {
   };
 
   useEffect(() => {
-    if (tenantSlug) {
+    if (tenantSlug && user?.token) {
       fetchApartments();
     }
   }, [user, tenantSlug]);

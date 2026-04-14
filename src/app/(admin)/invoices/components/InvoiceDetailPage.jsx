@@ -47,9 +47,44 @@ const InvoiceDetailPage = () => {
       return null;
     } catch (err) {
       console.error('Error fetching brand data:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
       return null;
+    }
+  };
+
+  const fetchInvoiceData = async (customFilters = null) => {
+    try {
+      const payload = customFilters || {
+        from_date: getDefaultFromDate(),
+        to_date: getDefaultToDate(),
+        type: 'all'
+      };
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/invoice/get/single/${invoiceId}`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+
+      // Handle the new response structure
+      if (response.data && response.data.data) {
+        setInvoice(response.data.data);
+        return response.data.data;
+      } else if (response.data) {
+        // Fallback for old structure if needed
+        setInvoice(response.data);
+        return response.data;
+      } else {
+        throw new Error('Invalid response format: No data received');
+      }
+    } catch (err) {
+      console.error('Error fetching invoice:', err);
+      throw err;
     }
   };
 
@@ -57,60 +92,55 @@ const InvoiceDetailPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
+        // Validation checks
         if (!user?.token) {
-          throw new Error('Authentication required');
+          throw new Error('Authentication required. Please log in again.');
         }
 
         if (!tenantSlug) {
-          throw new Error('Tenant slug not found');
+          throw new Error('Tenant information not found. Please check the URL.');
         }
 
         if (!invoiceId) {
-          throw new Error('Invoice ID not found');
+          throw new Error('Invoice ID not found. Please check the URL.');
         }
 
-        const brandResult = await fetchBrandData();
-
-        // Prepare the payload with date filters
-        const payload = {
-          from_date: getDefaultFromDate(),
-          to_date: getDefaultToDate(),
-          type: 'all'
-        };
-
-        const response = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/invoice/get/single/${invoiceId}`,
-          payload,
-          {
-            headers: {
-              'Authorization': `Bearer ${user.token}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            }
-          }
-        );
-
-        if (response.data && response.data.data) {
-          setInvoice(response.data.data);
-        } else if (response.data) {
-          setInvoice(response.data);
-        } else {
-          throw new Error('Invalid response format');
+        // Fetch brand data (optional, continue even if it fails)
+        try {
+          await fetchBrandData();
+        } catch (brandErr) {
+          console.warn('Brand data fetch failed, continuing without it:', brandErr);
         }
+
+        // Fetch invoice data
+        await fetchInvoiceData();
         
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
         console.error('Error response:', err.response?.data);
         console.error('Error status:', err.response?.status);
-        setError(err.response?.data?.message || err.message || 'Failed to fetch invoice details');
+        
+        // Extract meaningful error message
+        let errorMessage = 'Failed to fetch invoice details';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       }
     };
 
     if (tenantSlug && invoiceId) {
       fetchData();
+    } else if (!tenantSlug || !invoiceId) {
+      setError('Missing required parameters. Please check the URL.');
+      setLoading(false);
     }
   }, [user, tenantSlug, invoiceId]);
 
@@ -129,27 +159,12 @@ const InvoiceDetailPage = () => {
         type: customFilters.type || 'all'
       };
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/invoice/get/single/${invoiceId}`,
-        payload,
-        {
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.data && response.data.data) {
-        setInvoice(response.data.data);
-      } else if (response.data) {
-        setInvoice(response.data);
-      }
-      
+      await fetchInvoiceData(payload);
       setLoading(false);
     } catch (err) {
       console.error('Error refetching invoice:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to refetch invoice');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to refetch invoice';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -219,14 +234,10 @@ const InvoiceDetailPage = () => {
                   Refresh
                 </Button>
               </div>
-              <Button variant="primary" onClick={() => window.print()}>
-                <IconifyIcon icon="bx:printer" className="me-1" />
-                Print Invoice
-              </Button>
             </div>
           </div>
           
-          {/* Pass brandData directly - no need for data.data as we handle it in the child */}
+          {/* Pass invoice data directly - it's already the data object from the API response */}
           {invoice && <InvoiceDetailView invoice={invoice} brandData={brandData} />}
         </Col>
       </Row>

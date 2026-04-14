@@ -163,7 +163,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
                       <input 
                         type="search" 
                         className="form-control" 
-                        placeholder="Search agents..." 
+                        placeholder="Search property managers..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         disabled={agentsArray.length === 0}
@@ -187,7 +187,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
                 <Alert variant="warning" className="mt-3 mb-0">
                   <small>
                     <IconifyIcon icon="bx:info-circle" className="me-1" />
-                    No user types found. You need to configure user types before creating agents.
+                    No user types found. You need to configure user types before creating property managers.
                   </small>
                 </Alert>
               )}
@@ -209,7 +209,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
             <div className="mb-3">
               <IconifyIcon icon="bx:user" className="text-muted" size="48" />
             </div>
-            <h5 className="text-muted">No agents found</h5>
+            <h5 className="text-muted">No Property Manager found</h5>
             <p className="text-muted mb-0">Click "Add Agent" to create your first agent</p>
           </CardBody>
         </Card>

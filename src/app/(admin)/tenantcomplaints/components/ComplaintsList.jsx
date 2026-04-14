@@ -162,16 +162,6 @@ const ComplaintsList = ({ complaints, loading, refreshComplaints, tenantSlug }) 
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            {/* <div>
-              <Button 
-                variant="primary" 
-                className="d-inline-flex align-items-center"
-                onClick={handleAddClick}
-              >
-                <IconifyIcon icon="bx:plus" className="me-1" />
-                Create Complaint
-              </Button>
-            </div> */}
           </div>
         </CardBody>
         

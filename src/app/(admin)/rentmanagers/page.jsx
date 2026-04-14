@@ -10,6 +10,7 @@ const RentManagers = () => {
   const [rentAccounts, setRentAccounts] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [apartments, setApartments] = useState([]);
+  const [apartmentUnits, setApartmentUnits] = useState({}); // Store units by apartment UUID
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuthContext();
@@ -47,7 +48,7 @@ const RentManagers = () => {
         }
       );
 
-      // Fetch apartments for apartment_unit_uuid
+      // Fetch apartments
       const apartmentsResponse = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments`,
         {
@@ -58,15 +59,38 @@ const RentManagers = () => {
         }
       );
 
-      // Use the data array from the paginated response for rent accounts
+      // Fetch apartment units for each apartment using POST with body
+      const apartmentsData = apartmentsResponse.data.data || [];
+      const unitsMap = {};
+      
+      for (const apartment of apartmentsData) {
+        if (apartment.uuid) {
+          try {
+            const unitsResponse = await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/units/info`,
+              {
+                apartment_uuid: apartment.uuid
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${user.token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            unitsMap[apartment.uuid] = unitsResponse.data.data || [];
+          } catch (unitError) {
+            console.error(`Error fetching units for apartment ${apartment.uuid}:`, unitError);
+            unitsMap[apartment.uuid] = [];
+          }
+        }
+      }
+
       setRentAccounts(rentAccountsResponse.data.data || []);
-      
-      // Tenants data structure may vary - adjust based on your API response
       setTenants(tenantsResponse.data.users?.data || tenantsResponse.data.data || []);
-      
-      // Apartments data is the array of categories
-      setApartments(apartmentsResponse.data || []);
-      
+      setApartments(apartmentsData);
+      setApartmentUnits(unitsMap);
+
       setLoading(false);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -102,6 +126,7 @@ const RentManagers = () => {
         rentAccounts={rentAccounts}
         tenants={tenants}
         apartments={apartments}
+        apartmentUnits={apartmentUnits}
         refreshRentAccounts={refreshRentAccounts}
         updateRentAccounts={updateRentAccounts}
         estateSlug={tenantSlug}
@@ -111,3 +136,5 @@ const RentManagers = () => {
 };
 
 export default RentManagers;
+
+

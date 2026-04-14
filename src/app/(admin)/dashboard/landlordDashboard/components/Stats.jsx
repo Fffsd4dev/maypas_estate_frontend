@@ -1,6 +1,7 @@
 // import { Row, Col } from "react-bootstrap";
 // import { useState, useEffect } from "react";
 // import { useAuthContext } from "@/context/useAuthContext";
+// import { useParams } from "react-router-dom";
 // import IconifyIcon from '@/components/wrappers/IconifyIcon';
 // import { Card, CardBody, Spinner, Alert } from 'react-bootstrap';
 
@@ -12,7 +13,7 @@
 //     iconColor: "primary",
 //     name: "Tenants",
 //     variant: "primary",
-//     endpoint: "/testingestate/tenants/view",
+//     endpoint: "/tenants/view",
 //     description: "Total registered tenants"
 //   },
 //   {
@@ -21,7 +22,7 @@
 //     iconColor: "success",
 //     name: "Apartments",
 //     variant: "success",
-//     endpoint: "/TESTINGESTATE/apartments",
+//     endpoint: "/apartments",
 //     description: "Total apartments available"
 //   },
 //   {
@@ -30,7 +31,7 @@
 //     iconColor: "info",
 //     name: "Landlords",
 //     variant: "info",
-//     endpoint: "/testingestate/view-landlords",
+//     endpoint: "/view-landlords",
 //     description: "Total property owners"
 //   },
 //   {
@@ -39,7 +40,7 @@
 //     iconColor: "warning",
 //     name: "Complaints",
 //     variant: "warning",
-//     endpoint: "/testingestate/landlord/complaint/view-all",
+//     endpoint: "/landlord/complaint/view-all",
 //     description: "Total complaints logged"
 //   },
 //   {
@@ -48,7 +49,7 @@
 //     iconColor: "danger",
 //     name: "Maintenance",
 //     variant: "danger",
-//     endpoint: "/testingestate/landlord/maintenance/view-all",
+//     endpoint: "/landlord/maintenance/view-all",
 //     description: "Active maintenance requests"
 //   }
 // ];
@@ -116,12 +117,25 @@
 
 // const Stats = () => {
 //   const { user } = useAuthContext();
+//   const { tenantSlug } = useParams(); // Get tenantSlug from URL params
 //   const [stats, setStats] = useState({});
 //   const [loading, setLoading] = useState(true);
 //   const [errors, setErrors] = useState({});
 
 //   // Function to extract array from API response
 //   const extractArrayFromResponse = (data, endpointType) => {
+//     // Special handling for apartments to get the apartments array from categories
+//     if (endpointType === 'apartments') {
+//       // Check if data.data exists and is an array of categories
+//       if (data.data && Array.isArray(data.data)) {
+//         // Flatten all apartments from all categories
+//         const allApartments = data.data.flatMap(category => 
+//           category.apartments && Array.isArray(category.apartments) ? category.apartments : []
+//         );
+//         return allApartments;
+//       }
+//     }
+    
 //     // Try different possible response structures
 //     const possibleDataPaths = [
 //       data.data?.data,    // { data: { data: [] } }
@@ -153,6 +167,13 @@
 
 //   // Function to get count from API response
 //   const getCountFromResponse = (data, endpointType) => {
+//     // Special handling for apartments
+//     if (endpointType === 'apartments') {
+//       // Extract all apartments from categories
+//       const apartmentsArray = extractArrayFromResponse(data, endpointType);
+//       return Array.isArray(apartmentsArray) ? apartmentsArray.length : 0;
+//     }
+    
 //     // Special handling for tenants based on your API response
 //     if (endpointType === 'tenants' && data.users) {
 //       // If there's a total field in the pagination response
@@ -177,6 +198,10 @@
 //           return;
 //         }
 
+//         if (!tenantSlug) {
+//           throw new Error('Tenant slug not found in URL');
+//         }
+
 //         setLoading(true);
 //         setErrors({});
 //         setStats({}); // Clear previous stats
@@ -190,13 +215,13 @@
 //         // Fetch all stats in parallel
 //         const fetchPromises = statCards.map(async (card) => {
 //           try {
-//             const response = await fetch(
-//               `${import.meta.env.VITE_BACKEND_URL}/api${card.endpoint}`,
-//               {
-//                 method: "GET",
-//                 headers: headers,
-//               }
-//             );
+//             // Build the dynamic URL with tenantSlug from URL params
+//             const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}${card.endpoint}`;
+            
+//             const response = await fetch(apiUrl, {
+//               method: "GET",
+//               headers: headers,
+//             });
 
 //             if (!response.ok) {
 //               const errorText = await response.text();
@@ -302,8 +327,25 @@
 //       }
 //     };
 
-//     fetchStats();
-//   }, [user?.token]);
+//     if (tenantSlug) {
+//       fetchStats();
+//     } else {
+//       setLoading(false);
+//       setErrors(prev => ({
+//         ...prev,
+//         general: "Tenant slug is required to load statistics"
+//       }));
+//     }
+//   }, [user?.token, tenantSlug]); // Add tenantSlug to dependencies
+
+//   // Show error if tenantSlug is missing
+//   if (!tenantSlug) {
+//     return (
+//       <Alert variant="danger" className="mb-3">
+//         <strong>Error:</strong> Tenant slug not found in URL. Please navigate to a valid tenant dashboard.
+//       </Alert>
+//     );
+//   }
 
 //   // Check if any data has loaded
 //   const hasLoadedData = Object.keys(stats).length > 0;
@@ -340,7 +382,6 @@
 // };
 
 // export default Stats;
-
 
 
 
@@ -471,22 +512,35 @@ const Stats = () => {
 
   // Function to extract array from API response
   const extractArrayFromResponse = (data, endpointType) => {
+    // Special handling for apartments to get the apartments array from categories
+    if (endpointType === 'apartments') {
+      // Check if data.data exists and is an array of categories
+      if (data.data && Array.isArray(data.data)) {
+        // Flatten all apartments from all categories
+        const allApartments = data.data.flatMap(category => 
+          category.apartments && Array.isArray(category.apartments) ? category.apartments : []
+        );
+        return allApartments;
+      }
+    }
+    
     // Try different possible response structures
     const possibleDataPaths = [
-      data.data?.data,    // { data: { data: [] } }
-      data.data,          // { data: [] }
-      data.results,       // { results: [] }
-      data.items,         // { items: [] }
-      data.users?.data,   // { users: { data: [] } } - FOR TENANTS
-      data.users,         // { users: [] }
-      data.tenants,       // { tenants: [] }
-      data.apartments,    // { apartments: [] }
-      data.landlords,     // { landlords: [] }
-      data.complaints,    // { complaints: [] }
-      data.maintenance,   // { maintenance: [] }
-      data.requests,      // { requests: [] }
-      data.categories,    // { categories: [] }
-      data.managers       // { managers: [] }
+      data.data?.data,     // { data: { data: [] } } - For complaints, maintenance, and paginated responses
+      data.data?.data?.data, // Even deeper nesting (if needed)
+      data.data,           // { data: [] }
+      data.results,        // { results: [] }
+      data.items,          // { items: [] }
+      data.users?.data,    // { users: { data: [] } } - FOR TENANTS
+      data.users,          // { users: [] }
+      data.tenants,        // { tenants: [] }
+      data.apartments,     // { apartments: [] }
+      data.landlords,      // { landlords: [] }
+      data.complaints,     // { complaints: [] }
+      data.maintenance,    // { maintenance: [] }
+      data.requests,       // { requests: [] }
+      data.categories,     // { categories: [] }
+      data.managers        // { managers: [] }
     ];
     
     // Find the first array in possible paths
@@ -502,6 +556,36 @@ const Stats = () => {
 
   // Function to get count from API response
   const getCountFromResponse = (data, endpointType) => {
+    // Special handling for complaints
+    if (endpointType === 'complaints') {
+      // Check if there's a total field in the pagination metadata
+      if (data.data?.total !== undefined) {
+        return data.data.total;
+      }
+      // Check if data.data.data exists and is an array
+      if (data.data?.data && Array.isArray(data.data.data)) {
+        return data.data.data.length;
+      }
+    }
+    
+    // Special handling for maintenance
+    if (endpointType === 'maintenance') {
+      // Check if there's a total field in the pagination metadata
+      if (data.data?.total !== undefined) {
+        return data.data.total;
+      }
+      // Check if data.data.data exists and is an array
+      if (data.data?.data && Array.isArray(data.data.data)) {
+        return data.data.data.length;
+      }
+    }
+    
+    // Special handling for apartments
+    if (endpointType === 'apartments') {
+      const apartmentsArray = extractArrayFromResponse(data, endpointType);
+      return Array.isArray(apartmentsArray) ? apartmentsArray.length : 0;
+    }
+    
     // Special handling for tenants based on your API response
     if (endpointType === 'tenants' && data.users) {
       // If there's a total field in the pagination response
@@ -513,7 +597,12 @@ const Stats = () => {
       return Array.isArray(tenantsArray) ? tenantsArray.length : 0;
     }
     
-    // For other endpoints, extract array and count
+    // For other endpoints, check for pagination total first
+    if (data.data?.total !== undefined) {
+      return data.data.total;
+    }
+    
+    // Otherwise extract array and count
     const dataArray = extractArrayFromResponse(data, endpointType);
     return Array.isArray(dataArray) ? dataArray.length : 0;
   };
@@ -564,36 +653,48 @@ const Stats = () => {
             if (card.key === 'maintenance') {
               const dataArray = extractArrayFromResponse(data, card.key);
               if (Array.isArray(dataArray)) {
+                // Option 1: Show all maintenance requests (use amount from total)
+                // amount is already set from getCountFromResponse which uses the total field
+                
+                // Option 2: Show only active maintenance requests (not resolved/completed)
+                // Uncomment the code below if you only want to show active maintenance
+                /*
                 const activeMaintenance = dataArray.filter(item => {
-                  const status = item.status?.toLowerCase() || 
-                                item.request_status?.toLowerCase() ||
-                                item.maintenance_status?.toLowerCase();
-                  return status === 'pending' || 
-                         status === 'in-progress' || 
-                         status === 'active' ||
-                         status === 'open' ||
-                         status === 'processing' ||
-                         status === 'submitted';
+                  const status = item.maintenance_status?.toLowerCase() || 
+                                item.status?.toLowerCase() ||
+                                item.request_status?.toLowerCase();
+                  return status !== 'resolved' && 
+                         status !== 'completed' && 
+                         status !== 'closed';
                 });
                 amount = activeMaintenance.length;
+                */
+                
+                // For now, we'll use the total count from pagination
+                // amount already contains the total from getCountFromResponse
               }
             }
             
-            // For complaints, you might want to filter by status too
+            // For complaints, filter by status (optional)
             if (card.key === 'complaints') {
               const dataArray = extractArrayFromResponse(data, card.key);
               if (Array.isArray(dataArray)) {
-                // Count all complaints or filter by open status
-                const openComplaints = dataArray.filter(item => {
+                // Option 1: Show all complaints (use amount from total)
+                // amount is already set from getCountFromResponse which uses the total field
+                
+                // Option 2: Show only active complaints (not resolved/closed)
+                // Uncomment the code below if you only want to show open complaints
+                /*
+                const activeComplaints = dataArray.filter(item => {
                   const status = item.status?.toLowerCase() || 
                                 item.complaint_status?.toLowerCase();
-                  // You can adjust this based on what statuses you consider "active"
-                  return !status || 
-                         status === 'open' || 
-                         status === 'pending' || 
-                         status === 'investigating';
+                  return status !== 'resolved' && status !== 'closed';
                 });
-                amount = openComplaints.length;
+                amount = activeComplaints.length;
+                */
+                
+                // For now, we'll use the total count from pagination
+                // amount already contains the total from getCountFromResponse
               }
             }
             
@@ -664,7 +765,7 @@ const Stats = () => {
         general: "Tenant slug is required to load statistics"
       }));
     }
-  }, [user?.token, tenantSlug]); // Add tenantSlug to dependencies
+  }, [user?.token, tenantSlug]);
 
   // Show error if tenantSlug is missing
   if (!tenantSlug) {
@@ -674,9 +775,6 @@ const Stats = () => {
       </Alert>
     );
   }
-
-  // Check if any data has loaded
-  const hasLoadedData = Object.keys(stats).length > 0;
 
   return (
     <>

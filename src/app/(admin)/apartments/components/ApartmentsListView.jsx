@@ -28,7 +28,6 @@ const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick, onAssignAg
               <th>Address</th>
               <th>Location</th>
               <th>Landlord</th>
-              <th>Estate Manager</th>
               <th>Units Count</th>
               <th>Actions</th>
             </tr>
@@ -46,7 +45,7 @@ const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick, onAssignAg
                 </td>
                 <td>
                   <div>
-                    <span className="fw-semibold">{apartment.category_name || 'N/A'}</span>
+                    <span className="fw-semibold">{apartment.name || 'N/A'}</span>
                   </div>
                   <small className="text-muted">{apartment.category_description || ''}</small>
                 </td>
@@ -60,11 +59,8 @@ const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick, onAssignAg
                   <span className="text-muted">{getLandlordName(apartment)}</span>
                 </td>
                 <td>
-                  <span className="text-muted">{apartment.estate_manager?.estate_name || 'N/A'}</span>
-                </td>
-                <td>
                   <span className="badge bg-primary">
-                    {apartment.apartment_units?.length || 0}
+                    {apartment.number_apartment_units || 0}
                   </span>
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>

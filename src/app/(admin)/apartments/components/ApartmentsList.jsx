@@ -113,8 +113,8 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
       setAgents(transformedAgents);
       
     } catch (error) {
-      console.error('Error fetching agents:', error);
-      setAssignError(error.response?.data?.message || 'Failed to load agents. Please try again.');
+      console.error('Error fetching property managers:', error);
+      setAssignError(error.response?.data?.message || 'Failed to load property managers. Please try again.');
     } finally {
       setLoadingAgents(false);
     }
@@ -392,7 +392,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
             </Alert>
           )}
           
-          {!success && (
+          {!success && selectedApartment && (
             <>
               Are you sure you want to delete apartment at <strong>{selectedApartment?.address}</strong>? This action cannot be undone.
             </>
@@ -479,8 +479,8 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
                     </select>
                     <div className="form-text">
                       {agents.length === 0 
-                        ? 'No agents available. Please ensure agents are registered.' 
-                        : `Select from ${agents.length} available agent(s)`}
+                        ? 'No property managers available. Please ensure property managers are registered.' 
+                        : `Select from ${agents.length} available property manager(s)`}
                     </div>
                   </>
                 )}

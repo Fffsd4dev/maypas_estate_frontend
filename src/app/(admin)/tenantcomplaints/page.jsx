@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Col, Row } from 'react-bootstrap';
 import axios from 'axios';
 import { useAuthContext } from '@/context/useAuthContext';
@@ -14,16 +14,25 @@ const Complaints = () => {
   const { user } = useAuthContext();
   const { tenantSlug } = useParams();
 
-  const fetchComplaints = async () => {
+  const deduplicateComplaints = (complaints) => {
+    const uniqueMap = new Map();
+    
+    complaints.forEach(complaint => {
+      const id = complaint.id || complaint.complaint_id || complaint._id;
+      if (id && !uniqueMap.has(id)) {
+        uniqueMap.set(id, complaint);
+      }
+    });
+    
+    return Array.from(uniqueMap.values());
+  };
+
+  const fetchComplaints = useCallback(async () => {
+    if (!user?.token || !tenantSlug) return;
+    
     try {
-      if (!user?.token) {
-        throw new Error('Authentication required');
-      }
-
-      if (!tenantSlug) {
-        throw new Error('Tenant slug not found in URL');
-      }
-
+      setLoading(true);
+      
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/landlord/complaint/view-all`,
         {
@@ -34,29 +43,42 @@ const Complaints = () => {
         }
       );
       
-      // Adjust this based on your API response structure
-      const complaintsData = response.data.data.data || response.data.data || response.data || [];
-      setAllComplaints(Array.isArray(complaintsData) ? complaintsData : []);
+      // Extract complaints from response
+      let complaintsData = [];
+      const data = response.data;
+      
+      if (data?.data?.data && Array.isArray(data.data.data)) {
+        complaintsData = data.data.data;
+      } else if (data?.data && Array.isArray(data.data)) {
+        complaintsData = data.data;
+      } else if (Array.isArray(data)) {
+        complaintsData = data;
+      } else if (data?.complaints && Array.isArray(data.complaints)) {
+        complaintsData = data.complaints;
+      }
+      
+      // Remove duplicates
+      const uniqueComplaints = deduplicateComplaints(complaintsData);
+      
+      setAllComplaints(uniqueComplaints);
       setError(null);
       
     } catch (err) {
+      console.error('Fetch error:', err);
       setError(err.response?.data?.message || err.message || 'Failed to fetch complaints');
       setAllComplaints([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (tenantSlug && user?.token) {
-      fetchComplaints();
-    }
   }, [user, tenantSlug]);
 
-  const refreshComplaints = () => {
-    setLoading(true);
+  useEffect(() => {
     fetchComplaints();
-  };
+  }, [fetchComplaints]);
+
+  const refreshComplaints = useCallback(() => {
+    fetchComplaints();
+  }, [fetchComplaints]);
 
   if (loading) return <div className="text-center py-4">Loading complaints...</div>;
   if (error) return <div className="alert alert-danger">{error}</div>;

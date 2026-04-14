@@ -24,12 +24,17 @@ const AdminRoles = lazy(() => import('@/app/(admin)/adminroles/page'));
 const UserTypes = lazy(() => import('@/app/(admin)/usertype/page'));
 const EstateManagers = lazy(() => import('@/app/(admin)/estatemanagers/page'));
 const ApartmentCategories = lazy(() => import('@/app/(admin)/apartmentcategories/page'));
+const SubscriptionPlans = lazy(() => import('@/app/(admin)/subscriptionplans/page'));
+const Subscribers = lazy(() => import('@/app/(admin)/subscribers/page'));
 const ApartmentAmenities = lazy(() => import('@/app/(admin)/apartmentamenities/page'));
 const ApartmentSpeciality = lazy(() => import('@/app/(admin)/apartmentspeciality/page'));
 const Landlords = lazy(() => import('@/app/(admin)/landlords/page'));
 const Agents = lazy(() => import('@/app/(admin)/agents/page'));
 const Apartments = lazy(() => import('@/app/(admin)/apartments/page'));
+const Locations = lazy(() => import('@/app/(admin)/locations/page'));
+const Branches = lazy(() => import('@/app/(admin)/branches/page'));
 const Tenants = lazy(() => import('@/app/(admin)/tenants/page'));
+const Subscriptions = lazy(() => import('@/app/(admin)/subscriptions/page'));
 const RentManagers = lazy(() => import('@/app/(admin)/rentmanagers/page'));
 const Technicians = lazy(() => import('@/app/(admin)/technicians/page'));
 const Notification = lazy(() => import('@/app/(admin)/notifications/page'));
@@ -145,6 +150,18 @@ const appsRoutes = [{
   isPublic: false,
   roles: ['admin', 'estate-manager'] // Example role-based access
 }, {
+  name: 'Subscriptions',
+  path: '/subscriptions/plans',
+  element: withSuspense(SubscriptionPlans),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
+  name: 'Subscribers',
+  path: '/subscribers',
+  element: withSuspense(Subscribers),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
   name: 'Amenities',
   path: '/properties/apartment-amenities',
   element: withSuspense(ApartmentAmenities),
@@ -159,6 +176,12 @@ const appsRoutes = [{
 }];
 
 const tenantRoutes = [{
+  name: 'subscriptions',
+  path: '/:tenantSlug/subscriptions',
+  element: withSuspense(Subscriptions),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
+},{
   name: 'tenants Admins',
   path: '/:tenantSlug/accounts/admin',
   element: withSuspense(Admin),
@@ -177,8 +200,8 @@ const tenantRoutes = [{
   isPublic: false,
   roles: ['admin', 'estate-manager'] // Example role-based access
 }, {
-  name: 'Agents',
-  path: '/:tenantSlug/accounts/agents',
+  name: 'Property Managers',
+  path: '/:tenantSlug/accounts/property-managers',
   element: withSuspense(Agents),
   isPublic: false,
   roles: ['admin', 'estate-manager'] // Example role-based access
@@ -222,6 +245,18 @@ const tenantRoutes = [{
   name: 'Apartments',
   path: '/:tenantSlug/properties/apartments',
   element: withSuspense(Apartments),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
+  name: 'Location',
+  path: '/:tenantSlug/properties/locations',
+  element: withSuspense(Locations),
+  isPublic: false,
+  roles: ['admin', 'estate-manager'] // Example role-based access
+}, {
+  name: 'Branches',
+  path: '/:tenantSlug/properties/branches',
+  element: withSuspense(Branches),
   isPublic: false,
   roles: ['admin', 'estate-manager'] // Example role-based access
 }, {

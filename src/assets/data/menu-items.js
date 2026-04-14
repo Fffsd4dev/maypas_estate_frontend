@@ -55,4 +55,19 @@ export const MENU_ITEMS = [{
     url: '/properties/apartment-speciality',
     parentKey: 'properties'
   }]
+}, {
+  key: 'subscriptions',
+  icon: 'iconamoon:calendar-add-duotone',
+  label: 'Subscriptions',
+  children: [{
+    key: 'subscriptions-plans',
+    label: 'Subscription Plans',
+    url: '/subscriptions/plans',
+    parentKey: 'subscriptions'
+  }, {
+    key: 'subscribers',
+    label: 'Subscribers',
+    url: '/subscribers',
+    parentKey: 'subscriptions'
+  }]
 }];

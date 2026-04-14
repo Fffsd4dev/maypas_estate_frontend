@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert, Row, Col, Spinner } from 'react-bootstrap';
 import axios from 'axios';
@@ -16,18 +15,63 @@ const CreateApartmentsModal = ({
   const { user } = useAuthContext();
   const [formData, setFormData] = useState({
     category_uuid: '',
-    location: '',
+    location_uuid: '',
+    branch_uuid: '',
     name: '',
     address: '',
     landlord_id: '',
-    number_item: 1 // Initialize with 1 but allow user to change it
+    number_item: 1
   });
   const [categories, setCategories] = useState([]);
   const [landlords, setLandlords] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+
+  // Fetch branches when location is selected
+  useEffect(() => {
+    const fetchBranches = async () => {
+      if (!formData.location_uuid) {
+        setBranches([]);
+        return;
+      }
+
+      try {
+        setLoadingBranches(true);
+        const response = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/branch/view-all/${formData.location_uuid}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        const branchesData = response.data || [];
+        setBranches(branchesData);
+        
+        // Reset branch selection when location changes
+        setFormData(prev => ({
+          ...prev,
+          branch_uuid: ''
+        }));
+      } catch (err) {
+        console.error('Error fetching branches:', err);
+        setBranches([]);
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+
+    if (show && formData.location_uuid) {
+      fetchBranches();
+    }
+  }, [formData.location_uuid, tenantSlug, user, show]);
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -55,40 +99,51 @@ const CreateApartmentsModal = ({
             }
           }
         );
+          
+        // Fetch locations
+        const locationsResponse = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/location/view-all`,
+          {
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
         
         const categoriesData = categoriesResponse.data || [];
         const landlordsData = landlordsResponse.data.data || [];
+        const locationsData = locationsResponse.data || [];
         
         setCategories(categoriesData);
         setLandlords(landlordsData);
+        setLocations(locationsData);
         
-        // Set form data after categories are loaded
+        // Set form data after data is loaded
         if (editMode && apartmentToEdit) {
-          // Find the matching category by name if UUID doesn't match
-          let categoryUuid = apartmentToEdit.category_uuid;
-          
-          // If UUID doesn't match any category, try to find by name
-          if (!categoriesData.find(cat => cat.uuid === apartmentToEdit.category_uuid)) {
-            const matchingCategory = categoriesData.find(
-              cat => cat.name === apartmentToEdit.category_name
-            );
-            if (matchingCategory) {
-              categoryUuid = matchingCategory.uuid;
-            }
-          }
-          
+          // Map the apartment data to form fields
           setFormData({
-            category_uuid: categoryUuid || '',
-            location: apartmentToEdit.location || '',
+            category_uuid: apartmentToEdit.category_uuid || String(apartmentToEdit.category_id || ''),
+            location_uuid: apartmentToEdit.location_uuid || String(apartmentToEdit.location_id || ''),
+            branch_uuid: apartmentToEdit.branch_uuid || '',
             name: apartmentToEdit.name || '',
             address: apartmentToEdit.address || '',
-            landlord_id: apartmentToEdit.landlord_id || '',
-            number_item: apartmentToEdit.number_item || 1
+            landlord_id: apartmentToEdit.landlord_id || String(apartmentToEdit.land_lord?.id || ''),
+            number_item: parseInt(apartmentToEdit.number_apartment_units || apartmentToEdit.number_item || 1)
           });
+
+          // If there's a location_uuid, fetch branches for it
+          if (apartmentToEdit.location_id || apartmentToEdit.location_uuid) {
+            const locationId = apartmentToEdit.location_uuid || String(apartmentToEdit.location_id);
+            setTimeout(() => {
+              fetchBranchesForLocation(locationId);
+            }, 100);
+          }
         } else {
           setFormData({
             category_uuid: '',
-            location: '',
+            location_uuid: '',
+            branch_uuid: '',
             name: '',
             address: '',
             landlord_id: '',
@@ -101,6 +156,29 @@ const CreateApartmentsModal = ({
         console.error('Error fetching dropdown data:', err);
         setError('Failed to load required data');
         setLoadingData(false);
+      }
+    };
+
+    const fetchBranchesForLocation = async (locationUuid) => {
+      try {
+        setLoadingBranches(true);
+        const response = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/branch/view-all/${locationUuid}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        const branchesData = response.data || [];
+        setBranches(branchesData);
+      } catch (err) {
+        console.error('Error fetching branches:', err);
+        setBranches([]);
+      } finally {
+        setLoadingBranches(false);
       }
     };
 
@@ -137,15 +215,22 @@ const CreateApartmentsModal = ({
       if (!formData.landlord_id) {
         throw new Error('Please select a landlord');
       }
+      if (!formData.location_uuid) {
+        throw new Error('Please select a location');
+      }
+      if (!formData.branch_uuid) {
+        throw new Error('Please select a branch');
+      }
       if (!formData.number_item || formData.number_item < 1) {
         throw new Error('Please enter a valid number of items (minimum 1)');
       }
 
       if (editMode && apartmentToEdit) {
-        // Edit mode - use the correct endpoint and payload format
+        // Edit mode
         const payload = {
           category_uuid: formData.category_uuid,
-          location: formData.location,
+          location_uuid: formData.location_uuid,
+          branch_uuid: formData.branch_uuid,
           address: formData.address,
           landlord_id: parseInt(formData.landlord_id),
           apartment_uuid: apartmentToEdit.uuid,
@@ -164,12 +249,13 @@ const CreateApartmentsModal = ({
           }
         );
       } else {
-        // Create mode - use the original endpoint and payload
+        // Create mode
         const payload = {
-          category_uuid: formData.category_uuid,
-          number_item: formData.number_item, // Use the user-entered value
-          location: formData.location,
           name: formData.name,
+          category_uuid: formData.category_uuid,
+          number_item: formData.number_item,
+          location_uuid: formData.location_uuid,
+          branch_uuid: formData.branch_uuid,
           address: formData.address,
           landlord_id: parseInt(formData.landlord_id)
         };
@@ -275,6 +361,7 @@ const CreateApartmentsModal = ({
                   name="landlord_id"
                   value={formData.landlord_id}
                   onChange={handleChange}
+                  required
                   disabled={loading}
                 >
                   <option value="">Select Landlord</option>
@@ -286,7 +373,7 @@ const CreateApartmentsModal = ({
                 </Form.Select>
                 {editMode && apartmentToEdit && (
                   <Form.Text className="text-muted">
-                    Current landlord ID: {apartmentToEdit.landlord_id}
+                    Current landlord: {apartmentToEdit.land_lord?.name}
                   </Form.Text>
                 )}
               </Form.Group>
@@ -297,17 +384,53 @@ const CreateApartmentsModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Location *</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="location"
-                  value={formData.location}
+                <Form.Select
+                  name="location_uuid"
+                  value={formData.location_uuid}
                   onChange={handleChange}
                   required
                   disabled={loading}
-                  placeholder="Enter location (e.g., Lagos)"
-                />
+                >
+                  <option value="">Select Location</option>
+                  {locations.map(location => (
+                    <option key={location.uuid} value={location.uuid}>
+                      {location.name}
+                    </option>
+                  ))}
+                </Form.Select>
               </Form.Group>
             </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Branch *</Form.Label>
+                <Form.Select
+                  name="branch_uuid"
+                  value={formData.branch_uuid}
+                  onChange={handleChange}
+                  required
+                  disabled={loading || loadingBranches || !formData.location_uuid}
+                >
+                  <option value="">
+                    {loadingBranches ? 'Loading branches...' : 
+                     !formData.location_uuid ? 'Select location first' : 
+                     'Select Branch'}
+                  </option>
+                  {branches.map(branch => (
+                    <option key={branch.uuid} value={branch.uuid}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </Form.Select>
+                {loadingBranches && (
+                  <Form.Text className="text-muted">
+                    <Spinner animation="border" size="sm" /> Loading branches...
+                  </Form.Text>
+                )}
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Apartment Name *</Form.Label>
@@ -322,9 +445,6 @@ const CreateApartmentsModal = ({
                 />
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Number of Items *</Form.Label>
@@ -335,7 +455,7 @@ const CreateApartmentsModal = ({
                   onChange={handleChange}
                   required
                   min="1"
-                  disabled={loading || editMode} // Disable in edit mode if you don't want it to be editable
+                  disabled={loading || editMode}
                 />
                 <Form.Text className="text-muted">
                   Number of units to create initially

@@ -34,7 +34,6 @@ const ApartmentCharges = () => {
     );
   }
 
-  // Rest of your component code...
   const fetchApartmentUnitAndCharges = async () => {
     try {
       if (!user?.token) {
@@ -43,7 +42,7 @@ const ApartmentCharges = () => {
 
       setLoading(true);
 
-      // Fetch all apartments to find the specific unit
+      // First, fetch all apartments to find which apartment contains this unit
       const apartmentsResponse = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments`,
         {
@@ -54,25 +53,51 @@ const ApartmentCharges = () => {
         }
       );
 
-      // Find the specific apartment unit from the nested structure
       let foundUnit = null;
+      let foundApartment = null;
+      let foundCategory = null;
 
-      apartmentsResponse.data.forEach(category => {
-        category.apartments.forEach(apartment => {
-          const unit = apartment.apartment_units.find(
-            unit => unit.apartment_unit_uuid === apartmentUnitUuid
-          );
-          if (unit) {
-            foundUnit = {
-              ...unit,
-              apartment_name: apartment.name,
-              category_name: category.name,
-              full_address: apartment.address,
-              location: apartment.location
-            };
+      // Search through all apartments to find the unit
+      if (apartmentsResponse.data && apartmentsResponse.data.data) {
+        for (const category of apartmentsResponse.data.data) {
+          for (const apartment of category.apartments) {
+            try {
+              // Fetch units for this apartment using the new API
+              const unitsResponse = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/units/${apartment.uuid}`,
+                {
+                  headers: {
+                    'Authorization': `Bearer ${user.token}`,
+                    'Content-Type': 'application/json'
+                  }
+                }
+              );
+              
+              if (unitsResponse.data && Array.isArray(unitsResponse.data)) {
+                const unit = unitsResponse.data.find(
+                  u => u.apartment_unit_uuid === apartmentUnitUuid
+                );
+                if (unit) {
+                  foundUnit = {
+                    ...unit,
+                    apartment_name: apartment.name,
+                    category_name: category.name,
+                    category_description: category.description,
+                    full_address: apartment.address,
+                    location: apartment.location?.name || 'N/A'
+                  };
+                  foundApartment = apartment;
+                  foundCategory = category;
+                  break;
+                }
+              }
+            } catch (unitErr) {
+              console.error(`Failed to fetch units for apartment ${apartment.uuid}:`, unitErr);
+            }
           }
-        });
-      });
+          if (foundUnit) break;
+        }
+      }
 
       if (!foundUnit) {
         throw new Error('Apartment unit not found');
@@ -117,10 +142,10 @@ const ApartmentCharges = () => {
   };
 
   useEffect(() => {
-    if (tenantSlug && apartmentUnitUuid) {
+    if (tenantSlug && apartmentUnitUuid && user?.token) {
       fetchApartmentUnitAndCharges();
     }
-  }, [tenantSlug, apartmentUnitUuid]);
+  }, [tenantSlug, apartmentUnitUuid, user]);
 
   const refreshCharges = () => {
     fetchApartmentUnitAndCharges();
@@ -208,6 +233,9 @@ const ApartmentCharges = () => {
                   <strong>Unit Name:</strong> {apartmentUnit.apartment_unit_name}
                 </div>
                 <div className="mb-2">
+                  <strong>Unit ID:</strong> {apartmentUnit.apartment_unit_id}
+                </div>
+                <div className="mb-2">
                   <strong>Apartment:</strong> {apartmentUnit.apartment_name}
                 </div>
                 <div className="mb-2">
@@ -220,13 +248,13 @@ const ApartmentCharges = () => {
                     <strong>Address:</strong> {apartmentUnit.full_address}
                   </div>
                 )}
-                {apartmentUnit.location && (
+                {apartmentUnit.location && apartmentUnit.location !== 'N/A' && (
                   <div className="mb-2">
                     <strong>Location:</strong> {apartmentUnit.location}
                   </div>
                 )}
                 <div className="mb-2">
-                  <strong>Unit ID:</strong> 
+                  <strong>Unit UUID:</strong> 
                   <code className="ms-1 small">{apartmentUnit.apartment_unit_uuid}</code>
                 </div>
               </Col>

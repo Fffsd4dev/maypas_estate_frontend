@@ -21,6 +21,18 @@ const PrivateRoute = ({ children, roles = [] }) => {
   const { tenantSlug } = useParams();
 
   if (!isAuthenticated) {
+    // If there's a tenantSlug, redirect to tenant-specific sign-in
+    if (tenantSlug) {
+      return (
+        <Navigate
+          to={`/${tenantSlug}/auth/sign-in`}
+          replace
+          state={{ from: location }}
+        />
+      );
+    }
+    
+    // Otherwise redirect to default sign-in
     return (
       <Navigate
         to="/auth/sign-in-2"
@@ -40,8 +52,6 @@ const PrivateRoute = ({ children, roles = [] }) => {
 
   // Determine which layout to use based on user role
   const getLayout = () => {
-    // }
-    
     // For non-admin users with tenantSlug, use UserLayout
     if (tenantSlug) {
       return <UserLayout>{children}</UserLayout>;

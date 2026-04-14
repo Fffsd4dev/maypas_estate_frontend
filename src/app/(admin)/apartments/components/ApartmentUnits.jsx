@@ -15,16 +15,15 @@ const ApartmentUnits = () => {
   
   // Get the apartment data from navigation state
   const [apartment, setApartment] = useState(location.state?.apartment);
-  const [units, setUnits] = useState(apartment?.apartment_units || []);
+  const [units, setUnits] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // State for modals and operations
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteUnitModal, setShowDeleteUnitModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showEditUnitModal, setShowEditUnitModal] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [unitLoading, setUnitLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUnit, setSelectedUnit] = useState(null);
@@ -34,13 +33,57 @@ const ApartmentUnits = () => {
 
   const ITEMS_PER_PAGE = 15;
 
-  // Calculate pagination for units
-  const totalPages = Math.ceil(units.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedUnits = units.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Fetch units using the correct API endpoint
+  useEffect(() => {
+    const fetchUnits = async () => {
+      if (!apartmentUuid || !user?.token || !tenantSlug) {
+        setLoading(false);
+        return;
+      }
 
-  // Back to apartments path
-  const backToApartmentsPath = `/${tenantSlug}/properties/apartments`;
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/units/${apartmentUuid}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+        
+        // The API returns an array of units directly
+        const unitsData = response.data || [];
+        setUnits(unitsData);
+        
+        // If we don't have apartment details from location state, extract from first unit
+        if (!apartment && unitsData.length > 0) {
+          const firstUnit = unitsData[0];
+          setApartment({
+            uuid: firstUnit.apartment_uuid,
+            address: firstUnit.apartment_address,
+            category_name: firstUnit.category_name,
+            category_description: firstUnit.category_description,
+            location: firstUnit.location_id, // You might want to fetch location name separately
+            location_id: firstUnit.location_id,
+            land_lord: { name: 'Loading...' }, // Placeholder, fetch if needed
+            estate_manager: { estate_name: 'N/A' }
+          });
+        }
+        
+      } catch (err) {
+        console.error('Failed to fetch units:', err);
+        setError(err.response?.data?.message || 'Failed to load apartment units');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUnits();
+  }, [apartmentUuid, tenantSlug, user]);
 
   // Fetch amenities when component mounts
   useEffect(() => {
@@ -67,41 +110,13 @@ const ApartmentUnits = () => {
     fetchAmenities();
   }, [user]);
 
-  // Fetch apartment data if not passed via state
-  useEffect(() => {
-    const fetchApartmentData = async () => {
-      if ((!apartment || !apartment.apartment_units) && apartmentUuid) {
-        try {
-          if (!user?.token) return;
-          
-          const response = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/${apartmentUuid}`,
-            {
-              headers: {
-                'Authorization': `Bearer ${user.token}`,
-                'Content-Type': 'application/json',
-              }
-            }
-          );
-          
-          const apartmentData = response.data.data;
-          setApartment(apartmentData);
-          setUnits(apartmentData.apartment_units || []);
-        } catch (error) {
-          console.error('Failed to fetch apartment data:', error);
-        }
-      }
-    };
-    
-    fetchApartmentData();
-  }, [apartment, apartmentUuid, tenantSlug, user]);
+  // Calculate pagination for units
+  const totalPages = Math.ceil(units.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedUnits = units.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  // Update units when apartment changes
-  useEffect(() => {
-    if (apartment && apartment.apartment_units) {
-      setUnits(apartment.apartment_units);
-    }
-  }, [apartment]);
+  // Back to apartments path
+  const backToApartmentsPath = `/${tenantSlug}/properties/apartments`;
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -111,13 +126,13 @@ const ApartmentUnits = () => {
   // Handle edit unit click
   const handleEditUnitClick = (unit) => {
     setSelectedUnit(unit);
-    setUnitName(unit.apartment_unit_name);
+    setUnitName(unit.apartment_unit_name || '');
     
     // Set selected amenities for this unit
     if (unit.amenities && Array.isArray(unit.amenities)) {
       setSelectedAmenities(unit.amenities.map(amenity => ({
         id: amenity.id,
-        number: amenity.number || "1" // Default to "1" if not provided
+        number: amenity.number || "1"
       })));
     } else {
       setSelectedAmenities([]);
@@ -146,8 +161,10 @@ const ApartmentUnits = () => {
         throw new Error('No unit selected for deletion');
       }
 
-      await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartment/unit/${selectedUnit.apartment_unit_uuid}`,
+      const unitUuid = selectedUnit.apartment_unit_uuid;
+      
+      await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartment/unit/${unitUuid}`,
         {
           headers: {
             'Authorization': `Bearer ${user.token}`,
@@ -158,15 +175,11 @@ const ApartmentUnits = () => {
       
       setSuccess('Unit deleted successfully!');
       
-      // Update the UI without reloading - create a completely new array
-      const updatedUnits = units.filter(unit => unit.apartment_unit_uuid !== selectedUnit.apartment_unit_uuid);
-      setUnits([...updatedUnits]); // Spread into new array to force re-render
-      
-      // Also update the apartment state
-      setApartment(prev => ({
-        ...prev,
-        apartment_units: [...updatedUnits] // Spread into new array
-      }));
+      // Update the UI without reloading
+      const updatedUnits = units.filter(unit => 
+        unit.apartment_unit_uuid !== unitUuid
+      );
+      setUnits([...updatedUnits]);
       
       setTimeout(() => {
         setShowDeleteUnitModal(false);
@@ -183,13 +196,11 @@ const ApartmentUnits = () => {
   // Handle amenity selection change
   const handleAmenityChange = (amenityId, isChecked) => {
     if (isChecked) {
-      // Add amenity with default quantity of 1
       setSelectedAmenities(prev => [
         ...prev,
         { id: amenityId, number: "1" }
       ]);
     } else {
-      // Remove amenity
       setSelectedAmenities(prev => prev.filter(a => a.id !== amenityId));
     }
   };
@@ -234,24 +245,17 @@ const ApartmentUnits = () => {
       
       setSuccess('Unit updated successfully!');
       
-      // Update the UI with the new data without reloading
+      // Update the UI with the new data
       if (response.data && response.data.data) {
         const updatedUnit = response.data.data;
         
-        // Update the units array - create a completely new array
         const updatedUnits = units.map(unit => 
-          unit.apartment_unit_uuid === updatedUnit.apartment_unit_uuid 
+          unit.apartment_unit_uuid === updatedUnit.apartment_unit_uuid
             ? { ...unit, ...updatedUnit }
             : unit
         );
         
-        setUnits([...updatedUnits]); // Spread into new array to force re-render
-        
-        // Also update the apartment state
-        setApartment(prev => ({
-          ...prev,
-          apartment_units: [...updatedUnits] // Spread into new array
-        }));
+        setUnits([...updatedUnits]);
       } else {
         // If API doesn't return updated data, update based on what we sent
         const updatedUnits = units.map(unit => 
@@ -265,13 +269,7 @@ const ApartmentUnits = () => {
             : unit
         );
         
-        setUnits([...updatedUnits]); // Spread into new array to force re-render
-        
-        // Also update the apartment state
-        setApartment(prev => ({
-          ...prev,
-          apartment_units: [...updatedUnits] // Spread into new array
-        }));
+        setUnits([...updatedUnits]);
       }
       
       setTimeout(() => {
@@ -281,7 +279,6 @@ const ApartmentUnits = () => {
       
     } catch (error) {
       console.error("Update Unit Error:", error);
-      console.error("Error Response:", error.response);
       setError(error.response?.data?.message || 'Failed to update unit');
     } finally {
       setUnitLoading(false);
@@ -300,7 +297,6 @@ const ApartmentUnits = () => {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
 
-    // Previous button
     items.push(
       <Pagination.Prev
         key="prev"
@@ -309,7 +305,6 @@ const ApartmentUnits = () => {
       />
     );
 
-    // First page
     if (startPage > 1) {
       items.push(
         <Pagination.Item key={1} onClick={() => handlePageChange(1)}>
@@ -321,7 +316,6 @@ const ApartmentUnits = () => {
       }
     }
 
-    // Page numbers
     for (let page = startPage; page <= endPage; page++) {
       items.push(
         <Pagination.Item
@@ -334,7 +328,6 @@ const ApartmentUnits = () => {
       );
     }
 
-    // Last page
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
         items.push(<Pagination.Ellipsis key="end-ellipsis" />);
@@ -346,7 +339,6 @@ const ApartmentUnits = () => {
       );
     }
 
-    // Next button
     items.push(
       <Pagination.Next
         key="next"
@@ -358,44 +350,27 @@ const ApartmentUnits = () => {
     return <Pagination className="justify-content-center mt-3">{items}</Pagination>;
   };
 
-  // Handle delete apartment
-  const handleDeleteApartment = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      if (!user?.token) {
-        throw new Error('No authentication token found');
-      }
+  // Show loading state
+  if (loading) {
+    return (
+      <>
+        <PageBreadcrumb 
+          subName="Account" 
+          title="Apartment Units" 
+          parentLink={backToApartmentsPath}
+          parentText="Apartments"
+        />
+        <PageMetaData title="Units" />
+        <div className="text-center py-5">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2">Loading apartment units...</p>
+        </div>
+      </>
+    );
+  }
 
-      await axios.delete(
-        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/delete-apartment`,
-        {
-          data: {
-            id: apartment.id,
-          },
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json',
-            "Accept": "application/json",
-          }
-        }
-      );
-      
-      setSuccess('Apartment deleted successfully!');
-      setTimeout(() => {
-        navigate(backToApartmentsPath);
-      }, 1500);
-      
-    } catch (error) {
-      setError(error.response?.data?.message || 'Failed to delete apartment');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // If no apartment data was passed, show error
-  if (!apartment) {
+  // If no apartment data was found
+  if (!apartment && units.length === 0) {
     return (
       <>
         <PageBreadcrumb 
@@ -425,11 +400,11 @@ const ApartmentUnits = () => {
     <>
       <PageBreadcrumb 
         subName="Account" 
-        title={`Apartment Units - ${apartment.address}`} 
+        title={`Apartment Units - ${apartment?.address || apartment?.apartment_address || 'Units'}`} 
         parentLink={backToApartmentsPath}
         parentText="Apartments"
       />
-      <PageMetaData title={`Units - ${apartment.address}`} />
+      <PageMetaData title={`Units - ${apartment?.address || 'Apartment Units'}`} />
       
       {/* Success/Error Alerts */}
       {error && (
@@ -451,15 +426,16 @@ const ApartmentUnits = () => {
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center">
                 <div>
-                  <h4 className="mb-1">{apartment.address}</h4>
+                  <h4 className="mb-1">{apartment?.address || apartment?.apartment_address || 'Apartment'}</h4>
                   <p className="text-muted mb-0">
-                    <strong>Location:</strong> {apartment.location} | 
-                    <strong> Category:</strong> {apartment.category_name}
+                    <strong>Category:</strong> {apartment?.category_name || 'N/A'} | 
+                    <strong> Description:</strong> {apartment?.category_description || 'N/A'}
                   </p>
-                  <p className="text-muted mb-0">
-                    <strong>Landlord ID:</strong> {apartment.land_lord.name || 'Not assigned'} | 
-                    <strong> Estate:</strong> {apartment.estate_manager?.estate_name || 'N/A'}
-                  </p>
+                  {apartment?.location && (
+                    <p className="text-muted mb-0">
+                      <strong>Location ID:</strong> {apartment.location_id || apartment.location}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Button 
@@ -489,7 +465,7 @@ const ApartmentUnits = () => {
                   </span>
                 </h5>
                 <Badge bg="info">
-                  Category: {apartment.category_name}
+                  Category: {apartment?.category_name || 'N/A'}
                 </Badge>
               </div>
             </Card.Header>
@@ -502,8 +478,8 @@ const ApartmentUnits = () => {
                         <tr>
                           <th>S/N</th>
                           <th>Unit Name</th>
-                          <th>Created At</th>
-                          <th>Updated At</th>
+                          <th>Address</th>
+                          <th>Category</th>
                           <th>Status</th>
                           <th>Actions</th>
                         </tr>
@@ -512,23 +488,19 @@ const ApartmentUnits = () => {
                         {paginatedUnits.map((unit, index) => (
                           <tr key={unit.apartment_unit_uuid}>
                             <td>
-                              <strong>{index + 1}</strong>
+                              <strong>{startIndex + index + 1}</strong>
                             </td>
                             <td>
                               <span className="fw-semibold">{unit.apartment_unit_name}</span>
                             </td>
                             <td>
-                              {new Date(unit.created_at).toLocaleDateString()}
-                              <br />
-                              <small className="text-muted">
-                                {new Date(unit.created_at).toLocaleTimeString()}
-                              </small>
+                              <span className="text-muted">{unit.apartment_address}</span>
                             </td>
                             <td>
-                              {new Date(unit.updated_at).toLocaleDateString()}
+                              <span className="text-muted">{unit.category_name}</span>
                               <br />
                               <small className="text-muted">
-                                {new Date(unit.updated_at).toLocaleTimeString()}
+                                {unit.category_description}
                               </small>
                             </td>
                             <td>
@@ -587,25 +559,11 @@ const ApartmentUnits = () => {
           <Modal.Title>Confirm Unit Deletion</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {error && (
-            <Alert variant="danger" onClose={() => setError(null)} dismissible>
-              <IconifyIcon icon="bx:error" className="me-2" />
-              {error}
-            </Alert>
-          )}
-          
-          {success && (
-            <Alert variant="success">
-              <IconifyIcon icon="bx:check-circle" className="me-2" />
-              {success}
-            </Alert>
-          )}
-          
           {!success && selectedUnit && (
             <>
               <p>Are you sure you want to delete the unit <strong>"{selectedUnit.apartment_unit_name}"</strong>?</p>
               <p className="text-muted">
-                Unit ID: {selectedUnit.id} | UUID: {selectedUnit.apartment_unit_uuid}
+                Unit ID: {selectedUnit.apartment_unit_id} | UUID: {selectedUnit.apartment_unit_uuid}
               </p>
               <p className="text-danger">
                 <strong>Warning:</strong> This action cannot be undone.
@@ -624,7 +582,7 @@ const ApartmentUnits = () => {
           <Button 
             variant="danger" 
             onClick={handleDeleteUnitConfirm}
-            disabled={unitLoading || success}
+            disabled={unitLoading}
           >
             {unitLoading ? (
               <>
@@ -659,11 +617,11 @@ const ApartmentUnits = () => {
                 />
               </div>
               
-              {/* <div className="mb-3">
+              <div className="mb-3">
                 <Form.Label>Unit ID</Form.Label>
                 <Form.Control
                   type="text"
-                  value={selectedUnit.id}
+                  value={selectedUnit.apartment_unit_id}
                   disabled
                 />
               </div>
@@ -675,7 +633,7 @@ const ApartmentUnits = () => {
                   value={selectedUnit.apartment_unit_uuid}
                   disabled
                 />
-              </div> */}
+              </div>
               
               <div className="mb-3">
                 <Form.Label>Amenities</Form.Label>
@@ -739,39 +697,6 @@ const ApartmentUnits = () => {
               <>
                 <IconifyIcon icon="bx:save" className="me-1" />
                 Update Unit
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Delete Apartment Confirmation Modal */}
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirm Apartment Deletion</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          Are you sure you want to delete the apartment at <strong>{apartment.address}</strong>? 
-          This will also delete all associated units and cannot be undone.
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-            Cancel
-          </Button>
-          <Button 
-            variant="danger" 
-            onClick={handleDeleteApartment}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-1" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <IconifyIcon icon="bx:trash" className="me-1" />
-                Delete Apartment
               </>
             )}
           </Button>

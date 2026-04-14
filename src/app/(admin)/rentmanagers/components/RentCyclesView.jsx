@@ -1,11 +1,9 @@
-
-
-// src/pages/components/RentCyclesView.jsx
 import { useState, useEffect } from 'react';
-import { Modal, Button, Table, Badge, Card, Row, Col, Alert, Spinner, Form } from 'react-bootstrap';
+import { Modal, Button, Table, Badge, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { useAuthContext } from '@/context/useAuthContext';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
+import CreateRentAccountModal from './CreateRentAccountModal';
 
 const RentCyclesView = ({ 
   rentAccount, 
@@ -18,30 +16,48 @@ const RentCyclesView = ({
   const [rentManager, setRentManager] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Modal states
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCycleModal, setShowCycleModal] = useState(false);
   const [selectedCycle, setSelectedCycle] = useState(null);
-  
-  // Edit form state
-  const [editFormData, setEditFormData] = useState({
-    cycle_start_date: '',
-    cycle_end_date: '',
-    fee: '',
-    is_paid: false
-  });
-  
-  const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [modalError, setModalError] = useState(null);
-  const [modalSuccess, setModalSuccess] = useState(null);
+  const [tenants, setTenants] = useState([]);
+  const [apartments, setApartments] = useState([]);
 
   useEffect(() => {
-    if (rentAccount && rentAccount.rent_account?.uuid && user?.token) {
+    if (rentAccount && (rentAccount.rent_account?.uuid || rentAccount.uuid) && user?.token) {
       fetchRentCycles();
+      fetchTenantsAndApartments();
     }
   }, [rentAccount, user]);
+
+  const fetchTenantsAndApartments = async () => {
+    try {
+      // Fetch tenants
+      const tenantsResponse = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${estateSlug}/tenants/view`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Fetch apartments
+      const apartmentsResponse = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${estateSlug}/apartments`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      setTenants(tenantsResponse.data.users?.data || tenantsResponse.data.data || []);
+      setApartments(apartmentsResponse.data.data || []);
+    } catch (err) {
+      console.error('Error fetching tenants and apartments:', err);
+    }
+  };
 
   const fetchRentCycles = async () => {
     try {
@@ -82,14 +98,14 @@ const RentCyclesView = ({
         throw new Error('Failed to fetch rent cycles from all endpoints');
       }
 
-      // Process response data
+      // Extract rent_manager and cycles from the response
       let rentManagerData = null;
       let cyclesData = [];
 
       if (response.data.rent_manager) {
         rentManagerData = response.data.rent_manager;
         cyclesData = response.data.rent_manager.rent_cycles || [];
-      } else if (response.data.data) {
+      } else if (response.data.data && response.data.data.rent_manager) {
         rentManagerData = response.data.data.rent_manager;
         cyclesData = response.data.data.cycles || [];
       } else if (Array.isArray(response.data)) {
@@ -99,8 +115,31 @@ const RentCyclesView = ({
         rentManagerData = response.data.rent_manager || response.data;
       }
 
+      // Normalize cycles to ensure each has a uuid property
+      const normalizedCycles = (Array.isArray(cyclesData) ? cyclesData : []).map((cycle, index) => {
+        return {
+          ...cycle,
+          uuid: cycle.uuid || cycle.id,
+        };
+      });
+
+      // Create an enhanced rent account object with the apartment_unit_uuid from rent_manager
+      const enhancedRentAccount = {
+        ...rentAccount,
+        apartment_unit_uuid: rentManagerData?.apartment_unit_uuid || rentAccount.apartment_unit_uuid,
+        occupant: rentManagerData?.occupant || rentAccount.occupant || rentAccount.user,
+        start_date: rentManagerData?.start_date || rentAccount.start_date,
+        termination_date: rentManagerData?.termination_date || rentAccount.termination_date,
+        account_type: rentManagerData?.account_type || rentAccount.account_type,
+        is_active: rentManagerData?.is_active !== undefined ? rentManagerData.is_active : rentAccount.is_active
+      };
+
       setRentManager(rentManagerData);
-      setRentCycles(Array.isArray(cyclesData) ? cyclesData : []);
+      setRentCycles(normalizedCycles);
+      
+      // Update the rentAccount object with the enhanced version
+      Object.assign(rentAccount, enhancedRentAccount);
+      
     } catch (err) {
       console.error('Error fetching rent cycles:', err);
       setError(err.response?.data?.message || err.message || 'Failed to fetch rent cycles');
@@ -109,154 +148,21 @@ const RentCyclesView = ({
     }
   };
 
-  // Edit Modal Functions
   const handleEditClick = (cycle) => {
     setSelectedCycle(cycle);
-    setEditFormData({
-      cycle_start_date: cycle.cycle_start_date ? cycle.cycle_start_date.split(' ')[0] : '',
-      cycle_end_date: cycle.cycle_end_date ? cycle.cycle_end_date.split(' ')[0] : '',
-      fee: cycle.fee || '',
-      is_paid: cycle.is_paid === "1" || cycle.is_paid === 1 || cycle.is_paid === true
-    });
-    setModalError(null);
-    setModalSuccess(null);
-    setShowEditModal(true);
+    setShowCycleModal(true);
   };
 
-  const handleEditClose = () => {
-    setShowEditModal(false);
+  const handleCycleUpdate = (updatedCycle) => {
+    setRentCycles(prev => prev.map(cycle => 
+      cycle.uuid === updatedCycle.uuid ? updatedCycle : cycle
+    ));
+    setShowCycleModal(false);
     setSelectedCycle(null);
-    setEditFormData({
-      cycle_start_date: '',
-      cycle_end_date: '',
-      fee: '',
-      is_paid: false
-    });
-    setModalError(null);
-    setModalSuccess(null);
-  };
-
-  const handleEditChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      setEditLoading(true);
-      setModalError(null);
-      setModalSuccess(null);
-
-      if (!user?.token || !estateSlug || !selectedCycle) {
-        throw new Error('Required data missing');
-      }
-
-      const apartmentUnitUuid = rentManager?.apartment_unit_uuid || rentAccount?.apartment_unit_uuid;
-      if (!apartmentUnitUuid) {
-        throw new Error('Apartment unit UUID not found');
-      }
-
-      const updateData = {
-        apartment_unit_uuid: apartmentUnitUuid,
-        cycle_start_date: `${editFormData.cycle_start_date} 00:00:00`,
-        cycle_end_date: `${editFormData.cycle_end_date} 00:00:00`,
-        fee: parseFloat(editFormData.fee),
-        is_paid: editFormData.is_paid
-      };
-
-      await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/${estateSlug}/landlord/rent/account/cycle/update/${selectedCycle.uuid || selectedCycle.id}`,
-        updateData,
-        {
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      // Update local state
-      setRentCycles(prev => prev.map(cycle => 
-        (cycle.uuid || cycle.id) === (selectedCycle.uuid || selectedCycle.id)
-          ? { 
-              ...cycle, 
-              cycle_start_date: updateData.cycle_start_date,
-              cycle_end_date: updateData.cycle_end_date,
-              fee: updateData.fee,
-              is_paid: updateData.is_paid ? "1" : "0"
-            } 
-          : cycle
-      ));
-
-      setModalSuccess('Rent cycle updated successfully!');
-      setTimeout(() => {
-        handleEditClose();
-      }, 1500);
-      
-    } catch (err) {
-      console.error('Error updating rent cycle:', err);
-      setModalError(err.response?.data?.message || err.message || 'Failed to update rent cycle');
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  // Delete Modal Functions
-  const handleDeleteClick = (cycle) => {
-    setSelectedCycle(cycle);
-    setModalError(null);
-    setModalSuccess(null);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteClose = () => {
-    setShowDeleteModal(false);
-    setSelectedCycle(null);
-    setModalError(null);
-    setModalSuccess(null);
-  };
-
-  const handleDeleteConfirm = async () => {
-    try {
-      setDeleteLoading(true);
-      setModalError(null);
-      setModalSuccess(null);
-
-      if (!user?.token || !estateSlug || !selectedCycle) {
-        throw new Error('Required data missing');
-      }
-
-      await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/${estateSlug}/rent/account/get/cycles/${selectedCycle.uuid || selectedCycle.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${user.token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      // Remove from local state
-      setRentCycles(prev => prev.filter(cycle => 
-        (cycle.uuid || cycle.id) !== (selectedCycle.uuid || selectedCycle.id)
-      ));
-
-      setModalSuccess('Rent cycle deleted successfully!');
-      setTimeout(() => {
-        handleDeleteClose();
-      }, 1500);
-      
-    } catch (err) {
-      console.error('Error deleting rent cycle:', err);
-      setModalError(err.response?.data?.message || err.message || 'Failed to delete rent cycle');
-    } finally {
-      setDeleteLoading(false);
-    }
+    // Refresh cycles to get latest data
+    setTimeout(() => {
+      fetchRentCycles();
+    }, 500);
   };
 
   const formatDate = (dateString) => {
@@ -293,11 +199,11 @@ const RentCyclesView = ({
   };
 
   const getTenantInfo = () => {
-    return rentManager?.occupant || rentAccount?.user || null;
+    return rentManager?.occupant || rentAccount?.occupant || rentAccount?.user || null;
   };
 
   const getApartmentUnitInfo = () => {
-    return rentManager?.apartment_unit || rentAccount?.apartment_units?.unit_name || 'N/A';
+    return rentManager?.apartment_unit || rentAccount?.apartment_unit || 'N/A';
   };
 
   const getAccountType = () => {
@@ -416,7 +322,7 @@ const RentCyclesView = ({
                     const durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
                     
                     return (
-                      <tr key={cycle.uuid || cycle.id || index}>
+                      <tr key={cycle.uuid || index}>
                         <td>{index + 1}</td>
                         <td>{formatDate(cycle.cycle_start_date)}</td>
                         <td>{formatDate(cycle.cycle_end_date)}</td>
@@ -434,14 +340,6 @@ const RentCyclesView = ({
                               onClick={() => handleEditClick(cycle)}
                             >
                               <IconifyIcon icon="bx:edit" />
-                            </Button>
-                            <Button 
-                              variant="outline-danger" 
-                              size="sm"
-                              title="Delete Cycle"
-                              onClick={() => handleDeleteClick(cycle)}
-                            >
-                              <IconifyIcon icon="bx:trash" />
                             </Button>
                           </div>
                         </td>
@@ -504,139 +402,20 @@ const RentCyclesView = ({
       )}
 
       {/* Edit Cycle Modal */}
-      <Modal show={showEditModal} onHide={handleEditClose} centered size="lg" scrollable>
-        <Modal.Header closeButton className="border-bottom-0">
-          <Modal.Title className="w-100">Edit Rent Cycle</Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleEditSubmit}>
-          <Modal.Body>
-            {modalError && (
-              <Alert variant="danger" className="mb-3">
-                {modalError}
-              </Alert>
-            )}
-            {modalSuccess && (
-              <Alert variant="success" className="mb-3">
-                {modalSuccess}
-              </Alert>
-            )}
-            {selectedCycle && (
-              <>
-                <Form.Group className="mb-3">
-                  <Form.Label>Start Date *</Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="cycle_start_date"
-                    value={editFormData.cycle_start_date}
-                    onChange={handleEditChange}
-                    required
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>End Date *</Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="cycle_end_date"
-                    value={editFormData.cycle_end_date}
-                    onChange={handleEditChange}
-                    required
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Fee Amount *</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="fee"
-                    value={editFormData.fee}
-                    onChange={handleEditChange}
-                    required
-                    min="0"
-                    step="0.01"
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Check
-                    type="checkbox"
-                    name="is_paid"
-                    label="Payment Received"
-                    checked={editFormData.is_paid}
-                    onChange={handleEditChange}
-                  />
-                </Form.Group>
-              </>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleEditClose} disabled={editLoading}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" disabled={editLoading || modalSuccess}>
-              {editLoading ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-1" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <IconifyIcon icon="bx:save" className="me-1" />
-                  Update Cycle
-                </>
-              )}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-
-      {/* Delete Cycle Modal */}
-      <Modal show={showDeleteModal} onHide={handleDeleteClose} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Confirm Deletion</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {modalError && (
-            <Alert variant="danger" className="mb-3">
-              {modalError}
-            </Alert>
-          )}
-          {modalSuccess && (
-            <Alert variant="success" className="mb-3">
-              {modalSuccess}
-            </Alert>
-          )}
-          {selectedCycle && !modalSuccess && (
-            <>
-              <p>Are you sure you want to delete this rent cycle for the period <strong>{formatDate(selectedCycle.cycle_start_date)} </strong> to <strong>{formatDate(selectedCycle.cycle_end_date)}</strong></p>
-              
-              <p className="text-danger">
-                <strong>Warning:</strong> This action cannot be undone.
-              </p>
-            </>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleDeleteClose} disabled={deleteLoading || modalSuccess}>
-            {modalSuccess ? 'Close' : 'Cancel'}
-          </Button>
-          {!modalSuccess && (
-            <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleteLoading}>
-              {deleteLoading ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-1" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <IconifyIcon icon="bx:trash" className="me-1" />
-                  Delete Cycle
-                </>
-              )}
-            </Button>
-          )}
-        </Modal.Footer>
-      </Modal>
+      <CreateRentAccountModal
+        show={showCycleModal}
+        handleClose={() => {
+          setShowCycleModal(false);
+          setSelectedCycle(null);
+        }}
+        mode="cycle"
+        rentCycleToEdit={selectedCycle}
+        rentAccountForCycle={rentAccount}
+        estateSlug={estateSlug}
+        tenants={tenants}
+        apartments={apartments}
+        onCycleUpdate={handleCycleUpdate}
+      />
     </>
   );
 

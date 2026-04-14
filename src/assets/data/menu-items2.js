@@ -2,18 +2,24 @@
 
 export const MENU_ITEMS = (tenantSlug = "") => [{
   key: 'dashboard-finance',
-  icon: 'iconamoon:home-duotone',
+  icon: 'iconamoon:category-duotone',
   label: 'Dashboard',
   url: `/${tenantSlug}/dashboard`,
   allowedUserTypes: ['landlord', 'agent', 'admin'],
   parentKey: 'dashboards'
 }, {
   key: 'dashboard-finance',
-  icon: 'iconamoon:home-duotone',
+  icon: 'iconamoon:category-duotone',
   label: 'Dashboard',
   url: `/${tenantSlug}/tenant-dashboard`,
   allowedUserTypes: ['tenant'],
   parentKey: 'dashboards'
+}, {
+  key: 'subscriptions',
+  icon: 'iconamoon:attention-circle-duotone',
+  label: 'Subscriptions',
+  url: `/${tenantSlug}/subscriptions`,
+  allowedUserTypes: ['landlord', 'agent']
 }, {
   key: 'users',
   icon: 'iconamoon:profile-circle-duotone',
@@ -38,8 +44,8 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
     parentKey: 'users'
   },{
     key: 'account-agents',
-    label: 'Agents',
-    url: `/${tenantSlug}/accounts/agents`,
+    label: 'Property Managers',
+    url: `/${tenantSlug}/accounts/property-managers`,
     allowedUserTypes: ['landlord'],
     parentKey: 'users'
   }, {
@@ -50,12 +56,28 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
     parentKey: 'users'
   }]
 }, {
-  key: 'apartment-account',
+  key: 'properties',
   icon: 'iconamoon:home-duotone',
-  label: 'Apartments',
-  url: `/${tenantSlug}/properties/apartments`,
-  allowedUserTypes: ['landlord', 'agent'],
-  parentKey: 'properties'
+  label: 'Properties',
+  children: [{
+    key: 'apartment-account',
+    label: 'Apartment',
+    url: `/${tenantSlug}/properties/apartments`,
+    allowedUserTypes: ['landlord', 'agent'],
+    parentKey: 'properties'
+  }, {
+    key: 'location',
+    label: 'Locations',
+    url: `/${tenantSlug}/properties/locations`,
+    allowedUserTypes: ['landlord', 'agent'],
+    parentKey: 'properties'
+  }, {
+    key: 'branches',
+    label: 'Branches',
+    url: `/${tenantSlug}/properties/branches`,
+    allowedUserTypes: ['landlord', 'agent'],
+    parentKey: 'properties'
+  }]
 }, {
   key: 'apartment-complaints',
   icon: 'iconamoon:attention-circle-duotone',
@@ -72,7 +94,6 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
   key: 'documents',
   icon: 'iconamoon:folder-document-duotone',
   label: 'Documents',
-  // url: `/${tenantSlug}/documents`,
   allowedUserTypes: ['landlord', 'agent', 'tenant'],
   children: [{
     key: 'original-documents',
@@ -150,7 +171,7 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
   allowedUserTypes: ['landlord', 'agent']
 }, {
   key: 'notification',
-  icon: 'iconamoon:settings-duotone',
+  icon: 'iconamoon:notification-duotone',
   label: 'Notifications',
   url: `/${tenantSlug}/notification`,
   allowedUserTypes: ['landlord', 'agent']

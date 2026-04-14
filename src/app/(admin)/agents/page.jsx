@@ -40,13 +40,13 @@ const Agents = () => {
       } else if (response.data && Array.isArray(response.data)) {
         setAgents(response.data);
       } else {
-        console.warn('Unexpected agents response structure:', response.data);
+        console.warn('Unexpected property manager response structure:', response.data);
         setAgents([]);
       }
       
     } catch (err) {
-      console.error('Error fetching agents:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch agents');
+      console.error('Error fetching property manager:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch property manager');
       setAgents([]);
     }
   };
@@ -117,8 +117,8 @@ const Agents = () => {
 
   return (
     <>
-      <PageBreadcrumb subName="Account" title="Agents" />
-      <PageMetaData title="Agents" />
+      <PageBreadcrumb subName="Account" title="Property Manager" />
+      <PageMetaData title="Property Manager" />
       
       <AgentsList 
         agents={agents}

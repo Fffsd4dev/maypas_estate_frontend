@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import AuthLayout from '@/layouts/AuthLayout';
 import PrivateRoute from '@/routes/PrivateRoute';
 import { useAuthContext } from '@/context/useAuthContext';
@@ -65,17 +65,28 @@ const AppRouter = (props) => {
         {/* Fallback Route - redirect based on authentication */}
         <Route
           path="*"
-          element={
-            <Navigate 
-              to={isAuthenticated ? '/dashboard/analytics' : '/auth/sign-in-2'} 
-              replace 
-            />
-          }
+          element={<FallbackRedirect />}
         />
       </Routes>
     </Suspense>
   );
 };
 
-export default AppRouter;
+// Separate component to access useParams
+const FallbackRedirect = () => {
+  const { isAuthenticated } = useAuthContext();
+  const { tenantSlug } = useParams();
 
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard/analytics" replace />;
+  } else {
+    // If there's a tenantSlug in the URL, redirect to tenant-specific sign-in
+    if (tenantSlug) {
+      return <Navigate to={`/${tenantSlug}/auth/sign-in`} replace />;
+    }
+    // Otherwise redirect to default sign-in
+    return <Navigate to="/auth/sign-in-2" replace />;
+  }
+};
+
+export default AppRouter;
