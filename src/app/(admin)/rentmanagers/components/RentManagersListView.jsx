@@ -43,6 +43,7 @@ const RentManagersListView = ({
               <th>Apartment Details</th>
               <th>Unit</th>
               <th>Dates</th>
+              <th>Account Type</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -82,7 +83,7 @@ const RentManagersListView = ({
                         {unitName}
                       </Badge>
                     </div>
-                   </td>
+                  </td>
                   <td>
                     <div>
                       <small className="d-block">
@@ -92,7 +93,14 @@ const RentManagersListView = ({
                         <strong>End:</strong> {account.termination_date ? formatDate(account.termination_date) : 'Not set'}
                       </small>
                     </div>
-                   </td>
+                  </td>
+                  <td>
+                    <div>
+                      <Badge bg="info" className="fw-normal mb-1">
+                        {account.account_type.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+                      </Badge>
+                    </div>
+                  </td>
                   <td>
                     <Badge bg={isActive ? 'success' : 'danger'}>
                       {isActive ? 'Active' : 'Terminated'}
