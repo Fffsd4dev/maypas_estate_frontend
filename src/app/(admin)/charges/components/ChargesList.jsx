@@ -87,51 +87,6 @@ const handleDeleteConfirm = async () => {
   }
 };
 
-//   const handleDeleteConfirm = async () => {
-//     setLoading(true);
-//     setError(null);
-//     setSuccess(false);
-
-//     try {
-//       if (!user?.token) {
-//         throw new Error('No authentication token found');
-//       }
-
-//       if (!tenantSlug) {
-//         throw new Error('Tenant slug not found');
-//       }
-
-//       if (!apartmentUnit?.apartment_unit_uuid) {
-//         throw new Error('No apartment unit selected');
-//       }
-
-//       await axios.delete(
-//         `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/charges/${apartmentUnit.apartment_unit_uuid}/delete/${selectedCharge.id}`,
-//         {
-//           headers: {
-//             'Authorization': `Bearer ${user.token}`,
-//             'Content-Type': 'application/json',
-//             "Accept": "application/json",
-//           }
-//         }
-//       );
-      
-//       setSuccess('Charge deleted successfully!');
-//       refreshCharges();
-      
-//       setTimeout(() => {
-//         setShowDeleteModal(false);
-//         setSuccess(false);
-//       }, 1500);
-      
-//     } catch (error) {
-//       setError(error.response?.data?.message || 'Failed to delete charge');
-//       console.error('Error deleting charge:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
   const filteredCharges = chargesArray.filter(charge => 
     charge.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (charge.charge_type && charge.charge_type.toLowerCase().includes(searchTerm.toLowerCase())) ||

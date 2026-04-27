@@ -87,51 +87,6 @@ const InvoicesList = ({ invoices, pagination, refreshInvoices, tenantSlug, defau
     window.scrollTo(0, 0);
   };
 
-  // const handleDeleteConfirm = async () => {
-  //   setLoading(true);
-  //   setError(null);
-  //   setSuccess(false);
-
-  //   try {
-  //     if (!user?.token) {
-  //       throw new Error('No authentication token found');
-  //     }
-
-  //     if (!tenantSlug) {
-  //       throw new Error('Tenant slug not found');
-  //     }
-
-  //     if (!selectedInvoice?.invoice_uuid) {
-  //       throw new Error('No invoice selected for deletion');
-  //     }
-
-  //     await axios.delete(
-  //       `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/invoices/${selectedInvoice.invoice_uuid}`,
-  //       {
-  //         headers: {
-  //           'Authorization': `Bearer ${user.token}`,
-  //           'Content-Type': 'application/json',
-  //           "Accept": "application/json",
-  //         }
-  //       }
-  //     );
-      
-  //     setSuccess('Invoice deleted successfully!');
-  //     refreshInvoices(filters, currentPage);
-      
-  //     setTimeout(() => {
-  //       setShowDeleteModal(false);
-  //       setSuccess(false);
-  //     }, 1500);
-      
-  //   } catch (error) {
-  //     setError(error.response?.data?.message || 'Failed to delete invoice');
-  //     console.error('Error deleting invoice:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const renderPagination = () => {
     if (!pagination.last_page || pagination.last_page <= 1) return null;
 
