@@ -8,8 +8,8 @@ import Transactions from './components/Transactions';
 import PageMetaData from '@/components/PageTitle';
 const FinancePage = () => {
   return <>
-      <PageBreadcrumb title="Finance" subName="Dashboards" />
-      <PageMetaData title="Finance" />
+      <PageBreadcrumb title="" subName="Dashboards" />
+      {/* <PageMetaData title="Finance" /> */}
 
       <Stats />
       {/* <Row>

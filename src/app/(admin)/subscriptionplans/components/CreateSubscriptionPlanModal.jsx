@@ -209,14 +209,14 @@ const CreateSubscriptionPlanModal = ({
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Number of Agents *</Form.Label>
+                <Form.Label>Number of Proerty Managers *</Form.Label>
                 <Form.Control
                   type="number"
                   name="number_of_agents"
                   value={formData.number_of_agents}
                   onChange={handleChange}
                   required
-                  placeholder="Enter number of agents"
+                  placeholder="Enter number of property managers"
                   min="0"
                 />
               </Form.Group>

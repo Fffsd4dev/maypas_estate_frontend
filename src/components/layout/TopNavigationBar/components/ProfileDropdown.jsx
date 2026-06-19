@@ -29,7 +29,7 @@ const ProfileDropdown = () => {
       // This will:
       // 1. Delete the cookie
       // 2. Clear the user state
-      // 3. Redirect to /auth/sign-in-2
+      // 3. Redirect to /sign-in-2
       removeSession();
     }
   };

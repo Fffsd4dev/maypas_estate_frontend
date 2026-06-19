@@ -48,7 +48,7 @@ const AppRouter = (props) => {
       {/* Fallback Routes */}
       <Route
         path="*"
-        element={<Navigate to={isAuthenticated ? '/' : '/auth/sign-in-2'} />}
+        element={<Navigate to={isAuthenticated ? '/' : '/sign-in-2'} />}
       />
     </Routes>
   );

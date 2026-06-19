@@ -3,19 +3,27 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMetaData from '@/components/PageTitle';
 import LoginForm from './LoginForm';
 import signInImg from '@/assets/images/sign-in.png';
-import { useState, useEffect } from 'react';
-
-
 import { useAuthContext } from '@/context/useAuthContext';
-// import { useEffect, useState } from 'react';
-// import { useNavigate, useParams } from 'react-router-dom';
+import useBranding from '@/hooks/useBranding';
+import { useState, useEffect } from 'react';
 
 const SignIn2 = () => {
   const { tenantSlug } = useParams();
-  const [branding, setBranding] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { branding, loading, estateManagerName } = useBranding(tenantSlug);
   const { isAuthenticated } = useAuthContext();
   const navigate = useNavigate();
+
+  const formatTenantName = (slug) => {
+    if (!slug) return 'Estate Manager';
+    return slug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Get display name using fallback priority
+  const displayName = estateManagerName || branding?.name || formatTenantName(tenantSlug);
+  const logoUrl = branding?.logo;
 
   useEffect(() => {
     // Redirect if already authenticated
@@ -29,31 +37,7 @@ const SignIn2 = () => {
       }, 100);
       return;
     }
-
-    const fetchBranding = async () => {
-      if (!tenantSlug) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `https://trial.maypaspace.com/api/${tenantSlug}/get/brand/data`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          setBranding(data.data || data);
-        }
-      } catch (error) {
-        console.error('Error fetching branding:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBranding();
-  }, [tenantSlug, isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <>
@@ -78,11 +62,11 @@ const SignIn2 = () => {
                     </div>
                   ) : (
                     <div className="logo-box">
-                      <a href="/">
-                        {branding?.logo ? (
+                      <a href="/" className="text-decoration-none">
+                        {logoUrl ? (
                           <img
-                            src={branding.logo}
-                            alt={branding.name || 'Tenant'}
+                            src={logoUrl}
+                            alt={displayName}
                             style={{ 
                               maxHeight: '40px',
                               height: 'auto',
@@ -90,14 +74,32 @@ const SignIn2 = () => {
                               maxWidth: '100%',
                               objectFit: 'contain'
                             }}
+                            onError={(e) => {
+                              // Hide the broken image and show text fallback
+                              e.target.style.display = 'none';
+                              const parent = e.target.parentElement;
+                              if (parent) {
+                                const fallback = document.createElement('span');
+                                fallback.style.cssText = `
+                                  font-size: 20px;
+                                  font-weight: 600;
+                                  color: #333;
+                                  white-space: nowrap;
+                                `;
+                                fallback.textContent = displayName;
+                                parent.innerHTML = '';
+                                parent.appendChild(fallback);
+                              }
+                            }}
                           />
                         ) : (
                           <span style={{
                             fontSize: '20px',
                             fontWeight: '600',
-                            color: '#333'
+                            color: '#333',
+                            whiteSpace: 'nowrap'
                           }}>
-                            {branding?.name || 'Tenant'}
+                            {displayName}
                           </span>
                         )}
                       </a>
@@ -119,13 +121,13 @@ const SignIn2 = () => {
       <p className="text-white mb-0 text-center mt-3">
         New here?
         <Link 
-          to={`/auth/sign-up`} 
+          to={`/sign-up`} 
           className="text-white fw-bold ms-1"
         >
           Sign Up as a Landlord
         </Link> or 
         <Link 
-          to={`/${tenantSlug}/auth/sign-up`} 
+          to={`/${tenantSlug}/sign-up`} 
           className="text-white fw-bold ms-1"
         >
           Sign Up as a Tenant

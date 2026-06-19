@@ -25,7 +25,7 @@ const PrivateRoute = ({ children, roles = [] }) => {
     if (tenantSlug) {
       return (
         <Navigate
-          to={`/${tenantSlug}/auth/sign-in`}
+          to={`/${tenantSlug}/sign-in`}
           replace
           state={{ from: location }}
         />
@@ -35,7 +35,7 @@ const PrivateRoute = ({ children, roles = [] }) => {
     // Otherwise redirect to default sign-in
     return (
       <Navigate
-        to="/auth/sign-in-2"
+        to="/sign-in-2"
         replace
         state={{ from: location }}
       />

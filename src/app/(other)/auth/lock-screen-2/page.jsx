@@ -25,7 +25,7 @@ const LockScreen2 = () => {
         </Card>
         <p className="text-white mb-0 text-center">
           Not you? return{' '}
-          <Link to="/auth/sign-in-2" className="text-white fw-bold ms-1">
+          <Link to="/sign-in-2" className="text-white fw-bold ms-1">
             Sign In
           </Link>
         </p>

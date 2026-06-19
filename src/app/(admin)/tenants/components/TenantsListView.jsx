@@ -22,7 +22,7 @@ const TenantsListView = ({ tenants, onEditClick, onDeleteClick }) => {
               <th>Phone</th>
               <th>Email</th>
               <th>Date of Birth</th>
-              <th>Status</th>
+              {/* <th>Status</th> */}
               <th>Created At</th>
               <th>Actions</th>
             </tr>
@@ -45,11 +45,11 @@ const TenantsListView = ({ tenants, onEditClick, onDeleteClick }) => {
                 <td>
                   <span className="text-muted">{formatDate(tenant.dob)}</span>
                 </td>
-                <td>
+                {/* <td>
                   <span className={`badge ${tenant.deactivated === 'no' ? 'bg-success' : 'bg-danger'}`}>
                     {tenant.deactivated === 'no' ? 'Active' : 'Inactive'}
                   </span>
-                </td>
+                </td> */}
                 <td>
                   <span className="text-muted">{formatDate(tenant.created_at)}</span>
                 </td>

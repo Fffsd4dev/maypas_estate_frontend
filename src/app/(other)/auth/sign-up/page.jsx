@@ -4,41 +4,22 @@ import PageMetaData from '@/components/PageTitle';
 import ThirdPartyAuth from '@/components/ThirdPartyAuth';
 import SignUpForm from './components/SignUpForm';
 import signUpImg from '@/assets/images/sign-in.png';
-import { useState, useEffect } from 'react';
+import useBranding from '@/hooks/useBranding';
 
 const SignUp = () => {
   const { tenantSlug } = useParams();
-  const [branding, setBranding] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { branding, loading, estateManagerName } = useBranding(tenantSlug);
 
-  useEffect(() => {
-    const fetchBranding = async () => {
-      if (!tenantSlug) {
-        setLoading(false);
-        return;
-      }
+  const formatTenantName = (slug) => {
+    if (!slug) return 'Estate Manager';
+    return slug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
-      try {
-        const response = await fetch(
-          `https://trial.maypaspace.com/api/${tenantSlug}/get/brand/data`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          setBranding(data.data || data);
-        }
-      } catch (error) {
-        console.error('Error fetching branding:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBranding();
-  }, [tenantSlug]);
-
-  // Get tenant name safely
-  const tenantName = branding?.name || 'Tenant';
+  // Get tenant name using fallback priority
+  const displayName = estateManagerName || branding?.name || formatTenantName(tenantSlug);
   const logoUrl = branding?.logo;
 
   return (
@@ -69,7 +50,7 @@ const SignUp = () => {
                           <div className="position-relative">
                             <img
                               src={logoUrl}
-                              alt={tenantName}
+                              alt={displayName}
                               className="img-fluid"
                               style={{ 
                                 maxHeight: '50px',
@@ -85,9 +66,10 @@ const SignUp = () => {
                                   const fallback = document.createElement('div');
                                   fallback.className = 'd-flex align-items-center justify-content-center';
                                   fallback.style.height = '50px';
+                                  fallback.style.whiteSpace = 'nowrap';
                                   fallback.innerHTML = `
                                     <span class="fw-bold fs-5 text-dark">
-                                      ${tenantName}
+                                      ${displayName}
                                     </span>
                                   `;
                                   container.appendChild(fallback);
@@ -98,14 +80,14 @@ const SignUp = () => {
                         ) : (
                           <div className="d-flex align-items-center justify-content-center" style={{ height: '50px' }}>
                             <span className="fw-bold fs-5 text-dark">
-                              {tenantName}
+                              {displayName}
                             </span>
                           </div>
                         )}
                       </a>
-                      {tenantName && (
+                      {displayName && (
                         <p className="text-muted mt-2 mb-0 small">
-                          Welcome to {tenantName}
+                          Welcome to {displayName}
                         </p>
                       )}
                     </div>
@@ -126,7 +108,7 @@ const SignUp = () => {
       </Card>
       <p className="text-white mb-0 text-center mt-3">
         I already have an account
-        <Link to={`/${tenantSlug}/auth/sign-in`} className="text-white fw-bold ms-1">
+        <Link to={`/${tenantSlug}/tenant-sign-in`} className="text-white fw-bold ms-1">
           Sign In
         </Link>
       </p>

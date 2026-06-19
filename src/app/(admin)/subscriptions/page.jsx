@@ -26,7 +26,7 @@ const fetchCurrentSubscription = async () => {
     }
 
     const response = await axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/api/omoleestate/landlord/rent/account/current`,
+      `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/landlord/rent/account/current`,
       {
         headers: {
           'Authorization': `Bearer ${user.token}`,

@@ -44,22 +44,35 @@ const CreateDocumentModal = ({
           }
         );
         
-        // Flatten the nested apartments structure
+        // Handle the nested structure from the API response
         let apartmentsData = [];
-        if (Array.isArray(apartmentsResponse.data)) {
-          apartmentsResponse.data.forEach(category => {
+        
+        if (apartmentsResponse.data?.status === true && Array.isArray(apartmentsResponse.data?.data)) {
+          // Extract apartments from each category
+          apartmentsResponse.data.data.forEach(category => {
             if (category.apartments && Array.isArray(category.apartments)) {
               apartmentsData = [...apartmentsData, ...category.apartments];
             }
           });
+        } else if (Array.isArray(apartmentsResponse.data)) {
+          // Fallback: if response is a direct array
+          apartmentsData = apartmentsResponse.data;
+        } else if (apartmentsResponse.data?.data && Array.isArray(apartmentsResponse.data.data)) {
+          // Fallback: if response has data property but not status
+          apartmentsData = apartmentsResponse.data.data;
         }
         
         setApartments(apartmentsData);
+        
+        if (apartmentsData.length === 0) {
+          setError('No apartments found. Please create an apartment first.');
+        }
+        
         setLoadingData(false);
         
       } catch (err) {
         console.error('Error fetching apartments:', err);
-        setError('Failed to load apartments data');
+        setError('Failed to load apartments data: ' + (err.response?.data?.message || err.message));
         setLoadingData(false);
       }
     };
@@ -149,7 +162,9 @@ const CreateDocumentModal = ({
       );
       
       setSuccess(true);
-      refreshDocuments();
+      if (refreshDocuments) {
+        refreshDocuments();
+      }
       setTimeout(() => {
         handleClose();
         setSuccess(false);
@@ -183,7 +198,7 @@ const CreateDocumentModal = ({
   }
 
   return (
-    <Modal show={show} onHide={handleClose} centered>
+    <Modal show={show} onHide={handleClose} centered size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
           <IconifyIcon icon="bx:upload" className="me-2" />
@@ -215,7 +230,7 @@ const CreateDocumentModal = ({
               onChange={handleChange}
               required
               disabled={loading}
-              placeholder="Enter document name (e.g., Agreement Form)"
+              placeholder="Enter document name (e.g., Agreement Form, Lease Document)"
             />
           </Form.Group>
 
@@ -226,18 +241,24 @@ const CreateDocumentModal = ({
               value={formData.apartment_uuid}
               onChange={handleChange}
               required
-              disabled={loading}
+              disabled={loading || apartments.length === 0}
             >
               <option value="">Select Apartment</option>
               {apartments.map(apartment => (
                 <option key={apartment.uuid} value={apartment.uuid}>
-                  {apartment.address} - {apartment.location}
+                  {apartment.name} - {apartment.address} ({apartment.location?.name || 'Location not set'})
                 </option>
               ))}
             </Form.Select>
             <Form.Text className="text-muted">
               Select the apartment this document belongs to
             </Form.Text>
+            {apartments.length === 0 && !loadingData && (
+              <Alert variant="warning" className="mt-2">
+                <IconifyIcon icon="bx:info-circle" className="me-2" />
+                No apartments available. Please create an apartment first.
+              </Alert>
+            )}
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -251,7 +272,7 @@ const CreateDocumentModal = ({
               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
             />
             <Form.Text className="text-muted">
-              Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF
+              Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF (Max size: 10MB)
             </Form.Text>
             
             {fileName && (
@@ -284,7 +305,7 @@ const CreateDocumentModal = ({
           <Button 
             variant="primary" 
             type="submit" 
-            disabled={loading || !formData.document}
+            disabled={loading || !formData.document || !formData.apartment_uuid || !formData.name.trim()}
           >
             {loading ? (
               <>

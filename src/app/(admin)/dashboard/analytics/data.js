@@ -92,7 +92,7 @@ export const pagesList = [{
   rate: '12.25',
   variant: 'warning'
 }, {
-  path: '/auth/sign-in',
+  path: '/sign-in',
   views: 3369,
   time: '04m:25s',
   rate: '5.2',

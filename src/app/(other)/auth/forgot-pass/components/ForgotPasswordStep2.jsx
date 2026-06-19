@@ -59,7 +59,7 @@ const ForgotPasswordStep2 = ({ userEmail, onBack }) => {
 
       if (response.status === 200) {
         toast.success('Password reset successfully!');
-        navigate(`/${tenantSlug}/auth/sign-in`);
+        navigate(`/${tenantSlug}/sign-in`);
       } else {
         toast.error(response.data.message || 'Password reset failed');
       }
@@ -83,7 +83,7 @@ const ForgotPasswordStep2 = ({ userEmail, onBack }) => {
 
         if (response.status === 200) {
           toast.success('Password reset successfully!');
-          navigate(`/${tenantSlug}/auth/sign-in`);
+          navigate(`/${tenantSlug}/sign-in`);
         } else {
           toast.error(response.data.message || 'Password reset failed');
         }

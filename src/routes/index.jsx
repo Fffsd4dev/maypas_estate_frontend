@@ -56,11 +56,13 @@ const NotFound = lazy(() => import('@/app/(other)/(error-pages)/error-404/page')
 
 // Auth Routes
 const AuthSignIn = lazy(() => import('@/app/(other)/auth/sign-in/page'));
+const TenantSignIn = lazy(() => import('@/app/(other)/auth/tenant-sign-in/page'));
 const AuthSignIn2 = lazy(() => import('@/app/(other)/auth/sign-in-2/page'));
 const AuthSignUp = lazy(() => import('@/app/(other)/auth/sign-up/page'));
 const ManagerAuthSignUp = lazy(() => import('@/app/(other)/auth/managers-sign-up/page'));
 const AuthSignUp2 = lazy(() => import('@/app/(other)/auth/sign-up-2/page'));
 const ResetPassword = lazy(() => import('@/app/(other)/auth/reset-pass/page'));
+const ResetPasswordSMS = lazy(() => import('@/app/(other)/auth/reset-pass-sms/page'));
 const ForgotPassword = lazy(() => import('@/app/(other)/auth/forgot-pass/page'));
 const ResetPassword2 = lazy(() => import('@/app/(other)/auth/reset-pass-2/page'));
 const LockScreen = lazy(() => import('@/app/(other)/auth/lock-screen/page'));
@@ -88,7 +90,7 @@ const withSuspense = (Component) => (
 const initialRoutes = [{
   path: '/',
   name: 'root',
-  element: <Navigate to="/auth/sign-up" />,
+  element: <Navigate to="/sign-up" />,
   isPublic: true
 }, {
   path: '*',
@@ -364,35 +366,41 @@ const tenantRoutes = [{
 }];
 
 export const authRoutes = [{
-  path: '/:tenantSlug/auth/sign-in',
-  name: 'tenants Sign In',
+  path: '/:tenantSlug/sign-in',
+  name: 'Estate Manager Sign In',
   element: withSuspense(AuthSignIn),
   isPublic: true
 }, 
 {
+  path: '/:tenantSlug/tenant-sign-in',
+  name: 'Tenants Sign In',
+  element: withSuspense(TenantSignIn),
+  isPublic: true
+}, 
+{
   name: 'Sign In 2',
-  path: '/auth/sign-in-2',
+  path: '/sign-in-2',
   element: withSuspense(AuthSignIn2),
   isPublic: true
-// }, {
-//   name: 'Sign Up',
-//   path: '/:tenantSlug/auth/sign-up',
-//   element: withSuspense(AuthSignUp),
-//   isPublic: true
 }, {
   name: 'Sign Up',
-  path: '/:tenantSlug/auth/sign-up',
+  path: '/:tenantSlug/sign-up',
   element: withSuspense(AuthSignUp),
   isPublic: true
 }, {
   name: 'Manager Sign Up',
-  path: '/auth/sign-up',
+  path: '/sign-up',
   element: withSuspense(ManagerAuthSignUp),
   isPublic: true
 }, {
   name: 'Sign Up 2',
-  path: '/auth/sign-up-2',
+  path: '/sign-up-2',
   element: withSuspense(AuthSignUp2),
+  isPublic: true
+}, {
+  name: 'Reset Password SMS',
+  path: '/:tenantSlug/sms-set-password',
+  element: withSuspense(ResetPasswordSMS),
   isPublic: true
 }, {
   name: 'Reset Password',
@@ -411,12 +419,12 @@ export const authRoutes = [{
   isPublic: true
 }, {
   name: 'Lock Screen',
-  path: '/auth/lock-screen',
+  path: '/lock-screen',
   element: withSuspense(LockScreen),
   isPublic: true
 }, {
   name: 'Lock Screen 2',
-  path: '/auth/lock-screen-2',
+  path: '/lock-screen-2',
   element: withSuspense(LockScreen2),
   isPublic: true
 }, {

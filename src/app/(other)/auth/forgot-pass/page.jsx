@@ -78,7 +78,7 @@ const ForgotPassword = () => {
       
       <p className="text-white mb-0 text-center">
         Back to
-        <Link to={`/${tenantSlug}/auth/sign-in`} className="text-white fw-bold ms-1">
+        <Link to={`/${tenantSlug}/sign-in`} className="text-white fw-bold ms-1">
           Sign In
         </Link>
       </p>

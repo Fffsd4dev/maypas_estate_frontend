@@ -60,12 +60,6 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
   icon: 'iconamoon:home-duotone',
   label: 'Properties',
   children: [{
-    key: 'apartment-account',
-    label: 'Apartment',
-    url: `/${tenantSlug}/properties/apartments`,
-    allowedUserTypes: ['landlord', 'agent'],
-    parentKey: 'properties'
-  }, {
     key: 'location',
     label: 'Locations',
     url: `/${tenantSlug}/properties/locations`,
@@ -75,6 +69,12 @@ export const MENU_ITEMS = (tenantSlug = "") => [{
     key: 'branches',
     label: 'Branches',
     url: `/${tenantSlug}/properties/branches`,
+    allowedUserTypes: ['landlord', 'agent'],
+    parentKey: 'properties'
+  }, {
+    key: 'apartment-account',
+    label: 'Apartment',
+    url: `/${tenantSlug}/properties/apartments`,
     allowedUserTypes: ['landlord', 'agent'],
     parentKey: 'properties'
   }]

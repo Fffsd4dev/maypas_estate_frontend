@@ -82,10 +82,10 @@ const FallbackRedirect = () => {
   } else {
     // If there's a tenantSlug in the URL, redirect to tenant-specific sign-in
     if (tenantSlug) {
-      return <Navigate to={`/${tenantSlug}/auth/sign-in`} replace />;
+      return <Navigate to={`/${tenantSlug}/sign-in`} replace />;
     }
     // Otherwise redirect to default sign-in
-    return <Navigate to="/auth/sign-in-2" replace />;
+    return <Navigate to="/sign-in-2" replace />;
   }
 };
 

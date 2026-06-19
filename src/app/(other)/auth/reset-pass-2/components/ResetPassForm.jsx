@@ -70,7 +70,7 @@ const ResetPassForm = () => {
 
       if (response.status === 200) {
         toast.success('Password reset successfully!');
-        navigate('/auth/sign-in-2');
+        navigate('/sign-in-2');
       } else {
         toast.error(response.data.message || 'Password reset failed');
       }

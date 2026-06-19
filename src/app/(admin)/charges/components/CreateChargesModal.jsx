@@ -16,6 +16,7 @@ const CreateChargesModal = ({
   const { user } = useAuthContext();
   const [formData, setFormData] = useState({
     name: '',
+    charge_name: '',
     charge_type: '',
     fee_type: '',
     value: ''
@@ -42,6 +43,7 @@ const CreateChargesModal = ({
       if (editMode && chargeToEdit) {
         setFormData({
           name: chargeToEdit.name || '',
+          charge_name: chargeToEdit.charge_name || '',
           charge_type: chargeToEdit.charge_type || '',
           fee_type: chargeToEdit.fee_type || '',
           value: chargeToEdit.value || ''
@@ -49,6 +51,7 @@ const CreateChargesModal = ({
       } else {
         setFormData({
           name: '',
+          charge_name: '',
           charge_type: '',
           fee_type: '',
           value: ''
@@ -158,11 +161,27 @@ const CreateChargesModal = ({
           <Row>
             <Col md={12}>
               <Form.Group className="mb-3">
-                <Form.Label>Charge Name *</Form.Label>
+                <Form.Label>Name *</Form.Label>
                 <Form.Control
                   type="text"
                   name="name"
                   value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter name"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label>Charge Name *</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="charge_name"
+                  value={formData.charge_name}
                   onChange={handleChange}
                   required
                   placeholder="Enter charge name"

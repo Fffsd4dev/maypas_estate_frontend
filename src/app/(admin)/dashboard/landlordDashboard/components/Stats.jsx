@@ -67,8 +67,8 @@ const StatCard = ({ config, data, isLoading, error }) => {
               <IconifyIcon icon={icon} className="fs-24" />
             </span>
           </div>
-          <Alert variant="danger" className="mb-0 py-2">
-            Failed to load
+          <Alert variant="danger" className="mb-2 py-2">
+            {error}
           </Alert>
           <small className="text-muted mt-2 d-block">{description}</small>
         </CardBody>
@@ -117,18 +117,14 @@ const StatCard = ({ config, data, isLoading, error }) => {
 
 const Stats = () => {
   const { user } = useAuthContext();
-  const { tenantSlug } = useParams(); // Get tenantSlug from URL params
+  const { tenantSlug } = useParams();
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState({});
 
-  // Function to extract array from API response
   const extractArrayFromResponse = (data, endpointType) => {
-    // Special handling for apartments to get the apartments array from categories
     if (endpointType === 'apartments') {
-      // Check if data.data exists and is an array of categories
       if (data.data && Array.isArray(data.data)) {
-        // Flatten all apartments from all categories
         const allApartments = data.data.flatMap(category => 
           category.apartments && Array.isArray(category.apartments) ? category.apartments : []
         );
@@ -136,29 +132,26 @@ const Stats = () => {
       }
     }
     
-    // Try different possible response structures
     const possibleDataPaths = [
-      data.data?.data,     // { data: { data: [] } } - For complaints, maintenance, and paginated responses
-      data.data?.data?.data, // Even deeper nesting (if needed)
-      data.data,           // { data: [] }
-      data.results,        // { results: [] }
-      data.items,          // { items: [] }
-      data.users?.data,    // { users: { data: [] } } - FOR TENANTS
-      data.users,          // { users: [] }
-      data.tenants,        // { tenants: [] }
-      data.apartments,     // { apartments: [] }
-      data.landlords,      // { landlords: [] }
-      data.complaints,     // { complaints: [] }
-      data.maintenance,    // { maintenance: [] }
-      data.requests,       // { requests: [] }
-      data.categories,     // { categories: [] }
-      data.managers        // { managers: [] }
+      data.data?.data,
+      data.data?.data?.data,
+      data.data,
+      data.results,
+      data.items,
+      data.users?.data,
+      data.users,
+      data.tenants,
+      data.apartments,
+      data.landlords,
+      data.complaints,
+      data.maintenance,
+      data.requests,
+      data.categories,
+      data.managers
     ];
     
-    // Find the first array in possible paths
     let dataArray = possibleDataPaths.find(item => Array.isArray(item));
     
-    // If no array found in structured paths, check if data is directly an array
     if (!dataArray && Array.isArray(data)) {
       dataArray = data;
     }
@@ -166,55 +159,42 @@ const Stats = () => {
     return dataArray || [];
   };
 
-  // Function to get count from API response
   const getCountFromResponse = (data, endpointType) => {
-    // Special handling for complaints
     if (endpointType === 'complaints') {
-      // Check if there's a total field in the pagination metadata
       if (data.data?.total !== undefined) {
         return data.data.total;
       }
-      // Check if data.data.data exists and is an array
       if (data.data?.data && Array.isArray(data.data.data)) {
         return data.data.data.length;
       }
     }
     
-    // Special handling for maintenance
     if (endpointType === 'maintenance') {
-      // Check if there's a total field in the pagination metadata
       if (data.data?.total !== undefined) {
         return data.data.total;
       }
-      // Check if data.data.data exists and is an array
       if (data.data?.data && Array.isArray(data.data.data)) {
         return data.data.data.length;
       }
     }
     
-    // Special handling for apartments
     if (endpointType === 'apartments') {
       const apartmentsArray = extractArrayFromResponse(data, endpointType);
       return Array.isArray(apartmentsArray) ? apartmentsArray.length : 0;
     }
     
-    // Special handling for tenants based on your API response
     if (endpointType === 'tenants' && data.users) {
-      // If there's a total field in the pagination response
       if (data.users.total !== undefined) {
         return data.users.total;
       }
-      // Otherwise count the array
       const tenantsArray = extractArrayFromResponse(data, endpointType);
       return Array.isArray(tenantsArray) ? tenantsArray.length : 0;
     }
     
-    // For other endpoints, check for pagination total first
     if (data.data?.total !== undefined) {
       return data.data.total;
     }
     
-    // Otherwise extract array and count
     const dataArray = extractArrayFromResponse(data, endpointType);
     return Array.isArray(dataArray) ? dataArray.length : 0;
   };
@@ -233,18 +213,15 @@ const Stats = () => {
 
         setLoading(true);
         setErrors({});
-        setStats({}); // Clear previous stats
+        setStats({});
 
-        // Create headers for fetch requests
         const headers = {
           Authorization: `Bearer ${user.token}`,
           "Content-Type": "application/json"
         };
 
-        // Fetch all stats in parallel
         const fetchPromises = statCards.map(async (card) => {
           try {
-            // Build the dynamic URL with tenantSlug from URL params
             const apiUrl = `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}${card.endpoint}`;
             
             const response = await fetch(apiUrl, {
@@ -253,60 +230,56 @@ const Stats = () => {
             });
 
             if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to fetch data'}`);
+              let errorMessage = `Failed to load ${card.name}`;
+              
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || 
+                              errorData.error || 
+                              errorData.detail || 
+                              errorData.msg ||
+                              `HTTP ${response.status}: ${response.statusText}`;
+                
+                if (response.status === 403 || response.status === 401) {
+                  if (errorMessage.toLowerCase().includes('subscription')) {
+                    errorMessage = `Subscription Required: ${errorMessage}`;
+                  } else if (errorMessage.toLowerCase().includes('access')) {
+                    errorMessage = `🔒 Access Denied: ${errorMessage}`;
+                  }
+                } else if (response.status === 404) {
+                  errorMessage = `❌ Not Found: ${errorMessage}`;
+                }
+              } catch (e) {
+                try {
+                  const errorText = await response.text();
+                  if (errorText) {
+                    errorMessage = errorText;
+                  } else {
+                    errorMessage = `HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`;
+                  }
+                } catch (textError) {
+                  errorMessage = `HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`;
+                }
+              }
+              
+              throw new Error(errorMessage);
             }
 
             const data = await response.json();
             
             let amount = getCountFromResponse(data, card.key);
             
-            // For maintenance requests, filter only active ones
             if (card.key === 'maintenance') {
               const dataArray = extractArrayFromResponse(data, card.key);
               if (Array.isArray(dataArray)) {
-                // Option 1: Show all maintenance requests (use amount from total)
-                // amount is already set from getCountFromResponse which uses the total field
-                
-                // Option 2: Show only active maintenance requests (not resolved/completed)
-                // Uncomment the code below if you only want to show active maintenance
-                /*
-                const activeMaintenance = dataArray.filter(item => {
-                  const status = item.maintenance_status?.toLowerCase() || 
-                                item.status?.toLowerCase() ||
-                                item.request_status?.toLowerCase();
-                  return status !== 'resolved' && 
-                         status !== 'completed' && 
-                         status !== 'closed';
-                });
-                amount = activeMaintenance.length;
-                */
-                
-                // For now, we'll use the total count from pagination
-                // amount already contains the total from getCountFromResponse
+                // Use the count as is
               }
             }
             
-            // For complaints, filter by status (optional)
             if (card.key === 'complaints') {
               const dataArray = extractArrayFromResponse(data, card.key);
               if (Array.isArray(dataArray)) {
-                // Option 1: Show all complaints (use amount from total)
-                // amount is already set from getCountFromResponse which uses the total field
-                
-                // Option 2: Show only active complaints (not resolved/closed)
-                // Uncomment the code below if you only want to show open complaints
-                /*
-                const activeComplaints = dataArray.filter(item => {
-                  const status = item.status?.toLowerCase() || 
-                                item.complaint_status?.toLowerCase();
-                  return status !== 'resolved' && status !== 'closed';
-                });
-                amount = activeComplaints.length;
-                */
-                
-                // For now, we'll use the total count from pagination
-                // amount already contains the total from getCountFromResponse
+                // Use the count as is
               }
             }
             
@@ -314,7 +287,7 @@ const Stats = () => {
               key: card.key,
               data: {
                 amount: amount,
-                change: 0, // These APIs might not provide change data
+                change: 0,
                 changeColor: 'success'
               }
             };
@@ -322,10 +295,20 @@ const Stats = () => {
           } catch (error) {
             console.error(`Error fetching ${card.name}:`, error);
             
-            // Record error
+            let errorMsg = error.message || `Failed to load ${card.name}`;
+            
+            if (errorMsg.toLowerCase().includes('subscription') || 
+                errorMsg.toLowerCase().includes('subscribe') ||
+                errorMsg.toLowerCase().includes('plan')) {
+              errorMsg = `⚠️ ${errorMsg}`;
+            } else if (errorMsg.toLowerCase().includes('permission') || 
+                       errorMsg.toLowerCase().includes('access')) {
+              errorMsg = `🔒 ${errorMsg}`;
+            }
+            
             setErrors(prev => ({
               ...prev,
-              [card.key]: error.message || `Failed to load ${card.name}`
+              [card.key]: errorMsg
             }));
             
             return {
@@ -338,10 +321,8 @@ const Stats = () => {
           }
         });
 
-        // Wait for all fetches to complete
         const results = await Promise.allSettled(fetchPromises);
         
-        // Process results
         const statsData = {};
         results.forEach((result, index) => {
           const card = statCards[index];
@@ -352,6 +333,12 @@ const Stats = () => {
               amount: 0,
               error: true
             };
+            if (result.reason) {
+              setErrors(prev => ({
+                ...prev,
+                [card.key]: result.reason.message || `Failed to load ${card.name}`
+              }));
+            }
           }
         });
 
@@ -379,7 +366,6 @@ const Stats = () => {
     }
   }, [user?.token, tenantSlug]);
 
-  // Show error if tenantSlug is missing
   if (!tenantSlug) {
     return (
       <Alert variant="danger" className="mb-3">
@@ -396,12 +382,7 @@ const Stats = () => {
         </Alert>
       )}
       
-      {Object.keys(errors).filter(key => key !== 'general').length > 0 && (
-        <Alert variant="warning" className="mb-3">
-          <strong>Note:</strong> Some statistics could not be loaded. 
-          You may need to refresh the page or check your connection.
-        </Alert>
-      )}
+      
       
       <Row>
         {statCards.map((card) => (

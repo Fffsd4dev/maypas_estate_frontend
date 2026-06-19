@@ -96,3 +96,6 @@ const ApartmentsListView = ({ apartments, onEditClick, onDeleteClick, onAssignAg
 };
 
 export default ApartmentsListView;
+
+
+

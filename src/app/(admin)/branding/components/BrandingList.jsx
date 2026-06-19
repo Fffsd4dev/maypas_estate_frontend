@@ -25,7 +25,7 @@ const BrandingList = ({ branding, refreshBranding, tenantSlug }) => {
   // Generate login URL using tenantSlug
   const getLoginUrl = () => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/${tenantSlug}/auth/sign-in`;
+    return `${baseUrl}/${tenantSlug}/sign-in`;
   };
 
   const handleCopyUrl = async () => {

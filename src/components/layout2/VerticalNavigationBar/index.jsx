@@ -1,70 +1,46 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import FallbackLoading from '@/components/FallbackLoading';
 import SimplebarReactClient from '@/components/wrappers/SimplebarReactClient';
 import { getMenuItems } from '@/helpers/menu2';
 import HoverMenuToggle from './components/HoverMenuToggle';
+import useBranding from '@/hooks/useBranding';
 
 const AppMenu = lazy(() => import('./components/AppMenu'));
 
 const VerticalNavigationBar = () => {
-  const { tenantSlug } = useParams(); // Get tenantSlug from URL
-  const [branding, setBranding] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { tenantSlug } = useParams();
+  const { branding, loading, estateManagerName } = useBranding(tenantSlug);
   const menuItems = getMenuItems();
 
-  useEffect(() => {
-    const fetchBranding = async () => {
-      if (!tenantSlug) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `https://trial.maypaspace.com/api/${tenantSlug}/get/brand/data`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          // Access the logo from data.data.logo (since logo is inside data.data)
-          setBranding(data.data || data);
-        } else {
-          console.warn('No branding found or error fetching branding');
-        }
-      } catch (error) {
-        console.error('Error fetching branding:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBranding();
-  }, [tenantSlug]);
+  const formatTenantName = (slug) => {
+    if (!slug) return 'Estate Manager';
+    return slug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   if (loading) {
     return <FallbackLoading />;
   }
 
-  // Extract logo and name from the API response structure
-  // branding contains the 'data' object from the response
   const logoUrl = branding?.logo;
-  const tenantName = branding?.name || 'Tenant';
+  const displayName = estateManagerName || branding?.name || formatTenantName(tenantSlug);
 
   return (
     <div className="main-nav" id="leftside-menu-container" style={{ 
       display: 'flex', 
       flexDirection: 'column',
-      height: '100vh', // Full viewport height
-      overflow: 'hidden' // Prevent outer container from scrolling
+      height: '100vh',
+      overflow: 'hidden'
     }}>
-      {/* Logo section - simple image */}
       <div className="logo-box" style={{ padding: '20px 24px', textAlign: 'center', flexShrink: 0 }}>
-        <a href="" style={{ display: 'inline-block' }}>
+        <a href="/" style={{ display: 'inline-block', textDecoration: 'none' }}>
           {logoUrl ? (
             <img
               src={logoUrl}
-              alt={tenantName}
+              alt={displayName}
               style={{ 
                 maxHeight: '40px',
                 height: 'auto',
@@ -73,12 +49,11 @@ const VerticalNavigationBar = () => {
                 objectFit: 'contain'
               }}
               onError={(e) => {
-                // Fallback if image fails to load
-                console.error('Logo failed to load:', logoUrl);
                 e.target.style.display = 'none';
                 const parent = e.target.parentElement;
                 if (parent) {
-                  parent.innerHTML = `<div style="
+                  const fallbackDiv = document.createElement('div');
+                  fallbackDiv.style.cssText = `
                     height: 40px;
                     display: flex;
                     align-items: center;
@@ -89,7 +64,11 @@ const VerticalNavigationBar = () => {
                     background: #f5f5f5;
                     border-radius: 4px;
                     padding: 0 16px;
-                  ">${tenantName}</div>`;
+                    white-space: nowrap;
+                  `;
+                  fallbackDiv.textContent = displayName;
+                  parent.innerHTML = '';
+                  parent.appendChild(fallbackDiv);
                 }
               }}
             />
@@ -104,9 +83,10 @@ const VerticalNavigationBar = () => {
               color: '#333',
               background: '#f5f5f5',
               borderRadius: '4px',
-              padding: '0 16px'
+              padding: '0 16px',
+              whiteSpace: 'nowrap'
             }}>
-              {tenantName}
+              {displayName}
             </div>
           )}
         </a>
@@ -114,13 +94,12 @@ const VerticalNavigationBar = () => {
 
       <HoverMenuToggle />
 
-      {/* Make sure SimplebarReactClient takes remaining height and scrolls */}
       <SimplebarReactClient 
         className="scrollbar" 
         style={{ 
-          flex: 1, // Take remaining space
-          minHeight: 0, // Important for flex children to respect overflow
-          height: '100%' // Ensure it has a height
+          flex: 1,
+          minHeight: 0,
+          height: '100%'
         }}
       >
         <Suspense fallback={<FallbackLoading />}>
@@ -132,3 +111,6 @@ const VerticalNavigationBar = () => {
 };
 
 export default VerticalNavigationBar;
+
+
+

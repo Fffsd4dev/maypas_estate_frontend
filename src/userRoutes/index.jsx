@@ -30,7 +30,7 @@ const LockScreen2 = lazy(() => import('@/app/(other)/auth/lock-screen-2/page'));
 const initialRoutes = [{
   path: '/',
   name: 'root',
-  element: <Navigate to="/auth/sign-in-2" />
+  element: <Navigate to="/sign-in-2" />
 }, {
   path: '*',
   name: 'not-found',
@@ -70,24 +70,24 @@ const appsRoutes = [{
 }];
 
 export const authRoutes = [{
-  path: '/:tenantSlug/auth/sign-in',
+  path: '/:tenantSlug/sign-in',
   name: 'Sign In',
   element: <AuthSignIn />
 }, {
   name: 'Sign In 2',
-  path: '/auth/sign-in-2',
+  path: '/sign-in-2',
   element: <AuthSignIn2 />
 }, {
   name: 'Sign Up',
-  path: '/auth/sign-up',
+  path: '/sign-up',
   element: <AuthSignUp />
 }, {
   name: 'Sign Up 2',
-  path: '/auth/sign-up-2',
+  path: '/sign-up-2',
   element: <AuthSignUp2 />
 }, {
   name: 'Reset Password',
-  path: '/auth/reset-pass',
+  path: '/reset-pass',
   element: <ResetPassword />
 }, {
   name: 'Reset Password 2',
@@ -95,11 +95,11 @@ export const authRoutes = [{
   element: <ResetPassword2 />
 }, {
   name: 'Lock Screen',
-  path: '/auth/lock-screen',
+  path: '/lock-screen',
   element: <LockScreen />
 }, {
   name: 'Lock Screen 2',
-  path: '/auth/lock-screen-2',
+  path: '/lock-screen-2',
   element: <LockScreen2 />
 }];
 export const appRoutes = [...initialRoutes, ...generalRoutes, ...appsRoutes, ...authRoutes];

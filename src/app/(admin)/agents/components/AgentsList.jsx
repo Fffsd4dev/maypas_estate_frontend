@@ -179,7 +179,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
                     title={safeUserTypes.length === 0 ? "No user types available" : ""}
                   >
                     <IconifyIcon icon="bi:plus" className="me-1" />
-                    Add Agent
+                    Add Property Manager
                   </button>
                 </div>
               </div>
@@ -210,7 +210,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
               <IconifyIcon icon="bx:user" className="text-muted" size="48" />
             </div>
             <h5 className="text-muted">No Property Manager found</h5>
-            <p className="text-muted mb-0">Click "Add Agent" to create your first agent</p>
+            <p className="text-muted mb-0">Click "Add Property Manager" to create your first agent</p>
           </CardBody>
         </Card>
       )}

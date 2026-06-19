@@ -72,7 +72,7 @@ const ResetPassForm = () => {
 
       // If landlord endpoint succeeds, show success and navigate
       toast.success('Password reset successfully!');
-      navigate(`/${tenantSlug}/auth/sign-in`);
+      navigate(`/${tenantSlug}/sign-in`);
       return; // Exit early to prevent further execution
 
     } catch (landlordError) {
@@ -98,7 +98,7 @@ const ResetPassForm = () => {
 
           if (tenantResponse.status === 200) {
             toast.success('Password reset successfully!');
-            navigate(`/${tenantSlug}/auth/sign-in`);
+            navigate(`/${tenantSlug}/sign-in`);
           } else {
             toast.error(tenantResponse.data.message || 'Password reset failed');
           }

@@ -40,8 +40,8 @@ const StatCard = ({ config, data, isLoading, error }) => {
               <IconifyIcon icon={icon} className="fs-24" />
             </span>
           </div>
-          <Alert variant="danger" className="mb-0 py-2">
-            Failed to load
+          <Alert variant="danger" className="mb-2 py-2">
+            {error}
           </Alert>
           <small className="text-muted mt-2 d-block">{description}</small>
         </CardBody>
@@ -167,8 +167,45 @@ const Stats = () => {
             });
 
             if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to fetch data'}`);
+              // Try to get error message from response body
+              let errorMessage = `Failed to load ${card.name}`;
+              
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || 
+                              errorData.error || 
+                              errorData.detail || 
+                              errorData.msg ||
+                              `HTTP ${response.status}: ${response.statusText}`;
+                
+                // Add emoji indicators based on error type
+                if (response.status === 403 || response.status === 401) {
+                  if (errorMessage.toLowerCase().includes('subscription')) {
+                    errorMessage = `⚠️ Subscription Required: ${errorMessage}`;
+                  } else if (errorMessage.toLowerCase().includes('access')) {
+                    errorMessage = `🔒 Access Denied: ${errorMessage}`;
+                  } else {
+                    errorMessage = `🔒 ${errorMessage}`;
+                  }
+                } else if (response.status === 404) {
+                  errorMessage = `❌ Not Found: ${errorMessage}`;
+                } else if (response.status === 500) {
+                  errorMessage = `⚠️ Server Error: ${errorMessage}`;
+                }
+              } catch (e) {
+                try {
+                  const errorText = await response.text();
+                  if (errorText) {
+                    errorMessage = errorText;
+                  } else {
+                    errorMessage = `HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`;
+                  }
+                } catch (textError) {
+                  errorMessage = `HTTP ${response.status}: ${response.statusText || 'Failed to fetch data'}`;
+                }
+              }
+              
+              throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -217,7 +254,7 @@ const Stats = () => {
               key: card.key,
               data: {
                 amount: amount,
-                change: 0, // These APIs might not provide change data
+                change: 0,
                 changeColor: 'success'
               }
             };
@@ -225,10 +262,25 @@ const Stats = () => {
           } catch (error) {
             console.error(`Error fetching ${card.name}:`, error);
             
-            // Record error
+            let errorMsg = error.message || `Failed to load ${card.name}`;
+            
+            // Add visual indicators based on error content
+            if (errorMsg.toLowerCase().includes('subscription') || 
+                errorMsg.toLowerCase().includes('subscribe') ||
+                errorMsg.toLowerCase().includes('plan')) {
+              errorMsg = `⚠️ ${errorMsg}`;
+            } else if (errorMsg.toLowerCase().includes('permission') || 
+                       errorMsg.toLowerCase().includes('access') ||
+                       errorMsg.toLowerCase().includes('unauthorized')) {
+              errorMsg = `🔒 ${errorMsg}`;
+            } else if (errorMsg.toLowerCase().includes('not found')) {
+              errorMsg = `❌ ${errorMsg}`;
+            }
+            
+            // Record error with the actual message
             setErrors(prev => ({
               ...prev,
-              [card.key]: error.message || `Failed to load ${card.name}`
+              [card.key]: errorMsg
             }));
             
             return {
@@ -255,6 +307,13 @@ const Stats = () => {
               amount: 0,
               error: true
             };
+            // Also capture rejection reason if any
+            if (result.reason) {
+              setErrors(prev => ({
+                ...prev,
+                [card.key]: result.reason.message || `Failed to load ${card.name}`
+              }));
+            }
           }
         });
 
@@ -299,12 +358,7 @@ const Stats = () => {
         </Alert>
       )}
       
-      {Object.keys(errors).filter(key => key !== 'general').length > 0 && (
-        <Alert variant="warning" className="mb-3">
-          <strong>Note:</strong> Some statistics could not be loaded. 
-          You may need to refresh the page or check your connection.
-        </Alert>
-      )}
+      
       
       <Row>
         {statCards.map((card) => (

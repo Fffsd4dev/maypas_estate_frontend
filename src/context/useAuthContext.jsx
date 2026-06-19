@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
   const removeSession = () => {
     deleteCookie(authSessionKey);
     setUser(undefined);
-    navigate('/auth/sign-in-2');
+    navigate('/sign-in-2');
   };
 
   const removeSession2 = () => {
@@ -50,16 +50,16 @@ export function AuthProvider({ children }) {
     setUser(undefined);
     
     if (currentTenantSlug) {
-      navigate(`/${currentTenantSlug}/auth/sign-in`);
+      navigate(`/${currentTenantSlug}/sign-in`);
     } else {
       // Fallback: try to extract tenant slug from current URL path
       const pathMatch = window.location.pathname.match(/^\/([^\/]+)/);
       const extractedSlug = pathMatch ? pathMatch[1] : null;
       
       if (extractedSlug && extractedSlug !== 'auth') {
-        navigate(`/${extractedSlug}/auth/sign-in`);
+        navigate(`/${extractedSlug}/sign-in`);
       } else {
-        navigate('/auth/sign-in');
+        navigate('/sign-in');
       }
     }
   };

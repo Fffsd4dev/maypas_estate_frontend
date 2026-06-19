@@ -197,7 +197,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
       }
 
       await axios.delete(
-        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/delete-apartment`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/${selectedApartment.uuid}`,
         {
           data: {
             id: selectedApartment.id,
@@ -520,3 +520,5 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
 };
 
 export default ApartmentsList;
+
+
