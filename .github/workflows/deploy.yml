@@ -17,6 +17,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+            # -----------------------------
+      # CREATE FRONTEND ENV (IMPORTANT: BEFORE BUILD)
+      # -----------------------------
+      - name: Create .env file
+        run: |
+          echo "VITE_BACKEND_URL=https://live.maypashomes.com" > .env
 
       - name: Install Dependencies
         run: npm install
@@ -33,6 +39,7 @@ jobs:
           port: 21098
           script: |
             rm -rf /home/maypevcf/app.maypashomes.com/dist/*
+            mkdir /home/maypevcf/app.maypashomes.com/.ev
 
       - name: Deploy Files
         uses: appleboy/scp-action@v0.1.7
