@@ -1,0 +1,52 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+            # -----------------------------
+      # CREATE FRONTEND ENV (IMPORTANT: BEFORE BUILD)
+      # -----------------------------
+      - name: Create .env file
+        run: |
+          echo "VITE_BACKEND_URL=https://live.maypashomes.com" > .env
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Clean Remote Folder
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 21098
+          script: |
+            rm -rf /home/maypevcf/app.maypashomes.com/dist/*
+            mkdir /home/maypevcf/app.maypashomes.com/.ev
+
+      - name: Deploy Files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 21098
+          source: "dist/*"
+          target: "/home/maypevcf/app.maypashomes.com/"
