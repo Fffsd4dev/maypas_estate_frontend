@@ -53,7 +53,7 @@ const NotificationsList = ({
               <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <div>
                   <Badge bg="primary" className="me-2">
-                    {userType === 'landlord' ? 'Landlord' : 'Agent'}
+                    {userType === 'landlord' ? 'Landlord' : 'Property Manager'}
                   </Badge>
                   <Badge bg="danger" className="me-2">
                     {unreadCount} Unread

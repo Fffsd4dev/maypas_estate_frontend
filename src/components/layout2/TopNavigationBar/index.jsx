@@ -183,7 +183,7 @@ const TopNavigationBar = () => {
   const getLoginUrlLabel = () => {
     const userType = user?.userType;
     if (userType === 'tenant') return 'Tenant Login URL';
-    if (userType === 'agent') return 'Agent Login URL';
+    if (userType === 'agent') return 'Property Manager Login URL';
     if (userType === 'admin') return 'Admin Login URL';
     return 'Estate Manager Login URL';
   };

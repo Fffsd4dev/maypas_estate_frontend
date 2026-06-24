@@ -443,7 +443,7 @@ const SubscribeModal = ({
         icon: 'bx:user-check'
       },
       { 
-        name: 'Agent Limit', 
+        name: 'Property Manager Limit', 
         current: currentSubscription.agent_limit || '∞', 
         new: planToSubscribe.number_of_agents || '∞',
         icon: 'bx:user-voice'
@@ -654,7 +654,7 @@ const SubscribeModal = ({
                   <Col md={4}>
                     <div className="mb-2">
                       <IconifyIcon icon="bx:user-voice" className="me-1" />
-                      <strong>Agent Limit:</strong> {planToSubscribe.number_of_agents || 'Unlimited'}
+                      <strong>Property Manager Limit:</strong> {planToSubscribe.number_of_agents || 'Unlimited'}
                     </div>
                   </Col>
                   <Col md={4}>

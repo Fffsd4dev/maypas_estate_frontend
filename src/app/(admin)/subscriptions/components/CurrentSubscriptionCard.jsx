@@ -159,7 +159,7 @@ const CurrentSubscriptionCard = ({ currentSubscription }) => {
             <div className="border rounded p-3 text-center">
               <IconifyIcon icon="bx:user-voice" className="h4 mb-2 text-primary" />
               <div className="fw-semibold">{currentSubscription.agent_limit || '0'}</div>
-              <small className="text-muted">Agents</small>
+              <small className="text-muted">Property Managers</small>
             </div>
           </Col>
           <Col xs={6} md={4}>

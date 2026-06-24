@@ -48,7 +48,7 @@ const SubscriptionsListView = ({ subscriptions, currentSubscription, onSubscribe
               {/* <th>Final Price</th> */}
               <th>Staff Limit</th>
               <th>Admin Limit</th>
-              <th>Agent Limit</th>
+              <th>Property Manager Limit</th>
               <th>Apartment Limit</th>
               <th>Branch Limit</th>
               <th>Location Limit</th>

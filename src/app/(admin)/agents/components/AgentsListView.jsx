@@ -81,7 +81,7 @@ const AgentsListView = ({ agents, userTypes = [], onViewClick, onDeleteClick }) 
                       <button 
                         className="btn btn-sm btn-light text-danger"
                         onClick={() => onDeleteClick(agent)}
-                        title="Delete Agent"
+                        title="Delete Property Manager"
                       >
                         <IconifyIcon icon="bx:trash" />
                       </button>

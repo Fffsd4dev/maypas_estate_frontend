@@ -104,12 +104,12 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
       }
 
       if (!selectedAgent) {
-        throw new Error('No agent selected for deletion');
+        throw new Error('No Property Manager selected for deletion');
       }
 
       const agentUuid = getAgentUuid(selectedAgent);
       if (!agentUuid) {
-        throw new Error('Agent UUID not found');
+        throw new Error('Property Manager UUID not found');
       }
 
       await axios.get(
@@ -123,7 +123,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
         }
       );
       
-      setSuccess('Agent deleted successfully!');
+      setSuccess('Property Manager deleted successfully!');
       refreshAgents();
       
       setTimeout(() => {
@@ -133,8 +133,8 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
       }, 1500);
       
     } catch (error) {
-      console.error('Error deleting agent:', error);
-      setError(error.response?.data?.message || error.response?.data?.error || 'Failed to delete agent');
+      console.error('Error deleting Property Manager:', error);
+      setError(error.response?.data?.message || error.response?.data?.error || 'Failed to delete Property Manager');
     } finally {
       setLoading(false);
     }
@@ -210,7 +210,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
               <IconifyIcon icon="bx:user" className="text-muted" size="48" />
             </div>
             <h5 className="text-muted">No Property Manager found</h5>
-            <p className="text-muted mb-0">Click "Add Property Manager" to create your first agent</p>
+            <p className="text-muted mb-0">Click "Add Property Manager" to create your first Property Manager</p>
           </CardBody>
         </Card>
       )}
@@ -226,13 +226,13 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
       {/* View Agent Modal */}
       <Modal show={showViewModal} onHide={() => setShowViewModal(false)} centered size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Agent Details</Modal.Title>
+          <Modal.Title>Property Manager Details</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {loading ? (
             <div className="text-center py-4">
               <Spinner animation="border" variant="primary" />
-              <p className="mt-2">Loading agent details...</p>
+              <p className="mt-2">Loading Property Manager details...</p>
             </div>
           ) : viewAgentDetails ? (
             <div className="agent-details">
@@ -292,7 +292,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
               )}
             </div>
           ) : (
-            <Alert variant="warning">No details available for this agent.</Alert>
+            <Alert variant="warning">No details available for this Property Manager.</Alert>
           )}
         </Modal.Body>
         <Modal.Footer>
@@ -323,13 +323,13 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
           {!success && (
             <>
               <p>
-                Are you sure you want to delete agent{' '}
+                Are you sure you want to delete Property Manager{' '}
                 <strong>{selectedAgent?.first_name} {selectedAgent?.last_name}</strong>?
               </p>
               <p className="text-danger">
                 <small>
                   <IconifyIcon icon="bx:error" className="me-1" />
-                  This action cannot be undone. All data associated with this agent will be permanently deleted.
+                  This action cannot be undone. All data associated with this Property Manager will be permanently deleted.
                 </small>
               </p>
               {/* {selectedAgent && (
@@ -365,7 +365,7 @@ const AgentsList = ({ agents, userTypes = [], refreshAgents, tenantSlug }) => {
             ) : (
               <>
                 <IconifyIcon icon="bx:trash" className="me-1" />
-                Delete Agent
+                Delete Property Manager
               </>
             )}
           </Button>

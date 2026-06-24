@@ -140,7 +140,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
       }
 
       if (!selectedAgentUuid) {
-        throw new Error('Please select an agent');
+        throw new Error('Please select a Property Manager');
       }
 
       // Prepare the payload as specified
@@ -159,7 +159,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
           }
         }
       );
-      setAssignSuccess('Agent assigned successfully!');
+      setAssignSuccess('Property Manager assigned successfully!');
       
       // Refresh the apartments list to show updated information
       setTimeout(() => {
@@ -169,13 +169,13 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
       }, 1500);
       
     } catch (error) {
-      console.error('Error assigning agent:', error);
+      console.error('Error assigning Property Manager:', error);
       console.error('Error response:', error.response);
       setAssignError(
         error.response?.data?.message || 
         error.response?.data?.error || 
         error.message || 
-        'Failed to assign agent. Please try again.'
+        'Failed to assign Property Manager. Please try again.'
       );
     } finally {
       setAssignLoading(false);
@@ -304,7 +304,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
   // Helper function to find agent name by UUID
   const getAgentName = (uuid) => {
     const agent = agents.find(a => a.uuid === uuid);
-    return agent ? `${agent.first_name} ${agent.last_name}` : 'Unknown Agent';
+    return agent ? `${agent.first_name} ${agent.last_name}` : 'Unknown Property Manager';
   };
 
   return (
@@ -509,7 +509,7 @@ const ApartmentsList = ({ apartments, refreshApartments, tenantSlug }) => {
             ) : (
               <>
                 <IconifyIcon icon="bx:user-check" className="me-1" />
-                {selectedApartment?.assigned_agent_uuid ? 'Reassign Agent' : 'Assign Agent'}
+                {selectedApartment?.assigned_agent_uuid ? 'Reassign Property Manager' : 'Assign Property Manager'}
               </>
             )}
           </Button>

@@ -121,11 +121,11 @@ const CreateAgentsModal = ({
       }, 2000);
       
     } catch (err) {
-      console.error('Error creating agent:', err);
+      console.error('Error creating Property Manager:', err);
       const errorMessage = err.response?.data?.message || 
                           err.response?.data?.error || 
                           err.message || 
-                          'Failed to create agent';
+                          'Failed to create Property Manager';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -136,7 +136,7 @@ const CreateAgentsModal = ({
     <Modal show={show} onHide={handleClose} centered size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
-          Create New Agent
+          Create New Property Manager
         </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
@@ -149,7 +149,7 @@ const CreateAgentsModal = ({
           
           {success && (
             <Alert variant="success">
-              Agent created successfully!
+              Property Manager created successfully!
             </Alert>
           )}
 
@@ -252,7 +252,7 @@ const CreateAgentsModal = ({
             ) : (
               <>
                 <IconifyIcon icon="bi:plus" className="me-1" />
-                Create Agent
+                Create Property Manager
               </>
             )}
           </Button>

@@ -12,7 +12,7 @@ const SubscriptionPlansListView = ({ plans, onEditClick, onDeleteClick }) => {
               <th>Plan Name</th>
               <th>Staff</th>
               <th>Admins</th>
-              <th>Agents</th>
+              <th>Property Manager</th>
               <th>Apartment</th>
               <th>Branches</th>
               <th>Locations</th>
