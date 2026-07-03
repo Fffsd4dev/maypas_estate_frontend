@@ -1,4 +1,4 @@
-export const currency = '$';
+export const currency = '₦';
 export const currentYear = new Date().getFullYear();
 export const developedByLink = '';
 export const developedBy = 'Techzaa';

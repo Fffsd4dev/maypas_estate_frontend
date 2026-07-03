@@ -14,25 +14,54 @@ const CreateInvoiceModal = ({
 }) => {
   const { user } = useAuthContext();
   const [formData, setFormData] = useState({
-    user_uuid: '',
-    apartment_unit_uuid: '',
+    apartment_unit_uuid: [],
     fee_name: [''],
     fee_amount: [0],
-    invoice_status: ''
+    payment_amount: '' // amount the tenant is paying now, used only in edit/part-payment mode
   });
-  const [tenants, setTenants] = useState([]);
   const [categories, setCategories] = useState([]);
   const [apartmentsInCategory, setApartmentsInCategory] = useState([]);
   const [unitsInApartment, setUnitsInApartment] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedApartment, setSelectedApartment] = useState(null);
-  const [selectedUnit, setSelectedUnit] = useState(null);
+  const [selectedUnits, setSelectedUnits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [unitsLoading, setUnitsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Fetch tenants and apartments data
+  // Derived payment context for edit mode (read-only summary)
+  // Coerce with parseFloat since amounts often come back from the API as strings (e.g. "1500.00")
+  const invoiceTotal = parseFloat(invoiceToEdit?.invoice_amount) || 0;
+  const amountPaidSoFar = parseFloat(invoiceToEdit?.total_paid) || 0;
+  const balanceRemaining = Math.max(invoiceTotal - amountPaidSoFar, 0);
+
+  // Helper: fetch units for a given apartment uuid
+  const fetchUnitsForApartment = async (apartmentUuid) => {
+    try {
+      setUnitsLoading(true);
+      const unitsResponse = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments/units/info`,
+        { apartment_uuid: apartmentUuid },
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return unitsResponse.data?.data?.apartment_units || [];
+    } catch (err) {
+      console.error('Error fetching apartment units:', err);
+      setError('Failed to load apartment units');
+      return [];
+    } finally {
+      setUnitsLoading(false);
+    }
+  };
+
+  // Fetch apartments data (only needed for create mode)
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -46,68 +75,37 @@ const CreateInvoiceModal = ({
           throw new Error('Tenant slug not found');
         }
 
-        // Fetch tenants
-        const tenantsResponse = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/tenants/view`,
-          {
-            headers: {
-              'Authorization': `Bearer ${user.token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        // Fetch apartments (categories)
-        const apartmentsResponse = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments`,
-          {
-            headers: {
-              'Authorization': `Bearer ${user.token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        
-        // Set tenants data - adjust based on your API response structure
-        setTenants(tenantsResponse.data.users?.data || tenantsResponse.data.data || []);
-        
-        // Set categories data
-        setCategories(apartmentsResponse.data || []);
-        
-        // Set form data for edit mode
         if (editMode && invoiceToEdit) {
-          
-          setFormData({
-            user_uuid: invoiceToEdit.user?.uuid || '',
-            apartment_unit_uuid: invoiceToEdit.apartment_unit?.uuid || '',
-            fee_name: invoiceToEdit.payment_infos?.map(payment => payment.payment_name) || [''],
-            fee_amount: invoiceToEdit.payment_infos?.map(payment => parseFloat(payment.payment_fee)) || [0],
-            invoice_status: invoiceToEdit.invoice_status || 'pending' // Default to 'pending' if invoice_status is empty
-          });
-
-          // Pre-select category, apartment, and unit based on existing data
-          if (invoiceToEdit.apartment_unit?.uuid) {
-            const unitInfo = findUnitByUuid(invoiceToEdit.apartment_unit.uuid);
-            if (unitInfo) {
-              setSelectedCategory(unitInfo.category);
-              setApartmentsInCategory(unitInfo.category.apartments || []);
-              setSelectedApartment(unitInfo.apartment);
-              setUnitsInApartment(unitInfo.apartment.apartment_units || []);
-              setSelectedUnit(unitInfo.unit);
-            }
-          }
+          // Payment mode - start with a blank payment amount, nothing to prefill
+          setFormData(prev => ({
+            ...prev,
+            payment_amount: ''
+          }));
         } else {
+          // Create mode - fetch apartments (categories)
+          const apartmentsResponse = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/apartments`,
+            {
+              headers: {
+                'Authorization': `Bearer ${user.token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          const categoriesData = apartmentsResponse.data.data || apartmentsResponse.data || [];
+          setCategories(categoriesData);
+
           // Reset form for create mode
           setFormData({
-            user_uuid: '',
-            apartment_unit_uuid: '',
+            apartment_unit_uuid: [],
             fee_name: [''],
             fee_amount: [0],
-            invoice_status: ''
+            payment_amount: ''
           });
           setSelectedCategory(null);
           setSelectedApartment(null);
-          setSelectedUnit(null);
+          setSelectedUnits([]);
           setApartmentsInCategory([]);
           setUnitsInApartment([]);
         }
@@ -125,23 +123,8 @@ const CreateInvoiceModal = ({
       setError(null);
       setSuccess(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show, editMode, invoiceToEdit, user, tenantSlug]);
-
-  // Helper function to find unit by UUID
-  const findUnitByUuid = (unitUuid) => {
-    if (!categories || !Array.isArray(categories)) return null;
-    
-    for (const category of categories) {
-      for (const apartment of category.apartments || []) {
-        const units = apartment.apartment_units || [];
-        const unit = units.find(u => u.apartment_unit_uuid === unitUuid);
-        if (unit) {
-          return { unit, apartment, category };
-        }
-      }
-    }
-    return null;
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -197,82 +180,79 @@ const CreateInvoiceModal = ({
       const category = categories[categoryIndex];
       setSelectedCategory(category);
       
-      // The apartments are inside the category object
       const categoryApartments = category?.apartments || [];
       setApartmentsInCategory(categoryApartments);
       
-      // Reset all lower level selections
       setSelectedApartment(null);
-      setSelectedUnit(null);
+      setSelectedUnits([]);
       setUnitsInApartment([]);
       setFormData(prev => ({
         ...prev,
-        apartment_unit_uuid: ''
+        apartment_unit_uuid: []
       }));
     } else {
       setSelectedCategory(null);
       setApartmentsInCategory([]);
       setSelectedApartment(null);
-      setSelectedUnit(null);
+      setSelectedUnits([]);
       setUnitsInApartment([]);
       setFormData(prev => ({
         ...prev,
-        apartment_unit_uuid: ''
+        apartment_unit_uuid: []
       }));
     }
   };
 
-  // Level 2: Apartment Selection
-  const handleApartmentChange = (e) => {
+  // Level 2: Apartment Selection - fetches units via POST once apartment is chosen
+  const handleApartmentChange = async (e) => {
     const apartmentIndex = e.target.value;
-    
+
     if (apartmentIndex !== '') {
       const apartment = apartmentsInCategory[apartmentIndex];
-      
+
       if (apartment) {
         setSelectedApartment(apartment);
-        // The units are inside the apartment object as apartment_units
-        const units = apartment.apartment_units || [];
-        setUnitsInApartment(units);
-        
-        // Reset unit selection
-        setSelectedUnit(null);
+        setSelectedUnits([]);
+        setUnitsInApartment([]);
         setFormData(prev => ({
           ...prev,
-          apartment_unit_uuid: ''
+          apartment_unit_uuid: []
         }));
+
+        const units = await fetchUnitsForApartment(apartment.uuid);
+        setUnitsInApartment(units);
       } else {
         setSelectedApartment(null);
         setUnitsInApartment([]);
-        setSelectedUnit(null);
+        setSelectedUnits([]);
       }
     } else {
       setSelectedApartment(null);
       setUnitsInApartment([]);
-      setSelectedUnit(null);
+      setSelectedUnits([]);
       setFormData(prev => ({
         ...prev,
-        apartment_unit_uuid: ''
+        apartment_unit_uuid: []
       }));
     }
   };
 
-  // Level 3: Unit Selection
-  const handleUnitChange = (e) => {
-    const unitIndex = e.target.value;
-    
-    if (unitIndex !== '') {
-      const unit = unitsInApartment[unitIndex];
-      setSelectedUnit(unit);
+  // Level 3: Unit Selection (multi-select via checkboxes)
+  const handleUnitToggle = (unit) => {
+    const unitUuid = unit.uuid;
+    const isSelected = formData.apartment_unit_uuid.includes(unitUuid);
+
+    if (isSelected) {
+      setSelectedUnits(prev => prev.filter(u => u.uuid !== unitUuid));
       setFormData(prev => ({
         ...prev,
-        apartment_unit_uuid: unit?.apartment_unit_uuid || ''
+        apartment_unit_uuid: prev.apartment_unit_uuid.filter(uuid => uuid !== unitUuid)
       }));
     } else {
-      setSelectedUnit(null);
+      setSelectedUnits(prev => [...prev, unit]);
       setFormData(prev => ({
         ...prev,
-        apartment_unit_uuid: ''
+        apartment_unit_uuid: [...prev.apartment_unit_uuid, unitUuid]
       }));
     }
   };
@@ -292,19 +272,16 @@ const CreateInvoiceModal = ({
         throw new Error('Authentication required');
       }
 
-      // Different validation for edit mode vs create mode
       if (editMode) {
-        // Edit mode validation - only check invoice_status
-        if (!formData.invoice_status) {
-          throw new Error('Please select a status');
+        // Payment mode validation - payment amount must be a valid positive number
+        const amount = parseFloat(formData.payment_amount);
+        if (formData.payment_amount === '' || isNaN(amount) || amount <= 0) {
+          throw new Error('Please enter a valid payment amount (greater than 0)');
         }
       } else {
         // Create mode validation - check all fields
-        if (!formData.user_uuid) {
-          throw new Error('Please select a tenant');
-        }
-        if (!formData.apartment_unit_uuid) {
-          throw new Error('Please select an apartment unit');
+        if (formData.apartment_unit_uuid.length === 0) {
+          throw new Error('Please select at least one apartment unit');
         }
         if (formData.fee_name.some(name => !name.trim())) {
           throw new Error('Please fill all fee purpose fields');
@@ -315,19 +292,19 @@ const CreateInvoiceModal = ({
       }
 
       if (editMode && invoiceToEdit) {
-        // Edit mode - update invoice invoice_status only
-        const updatePayload = {
-          status: formData.invoice_status
-        };
-
+        // Payment mode - record a payment against the invoice
         const invoiceUuid = invoiceToEdit.uuid || invoiceToEdit.invoice_uuid;
         
         if (!invoiceUuid) {
           throw new Error('Invoice UUID not found');
         }
 
+        const updatePayload = {
+          fee_amount: parseFloat(formData.payment_amount)
+        };
+
         await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/invoice/update/single/${invoiceUuid}`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/invoice/update/${invoiceUuid}`,
           updatePayload,
           {
             headers: {
@@ -339,7 +316,6 @@ const CreateInvoiceModal = ({
       } else {
         // Create mode - create new invoice
         const payload = {
-          user_uuid: formData.user_uuid,
           apartment_unit_uuid: formData.apartment_unit_uuid,
           fee_name: formData.fee_name,
           fee_amount: formData.fee_amount
@@ -366,7 +342,7 @@ const CreateInvoiceModal = ({
     } catch (err) {
       const errorMessage = err.response?.data?.message || 
                           err.message || 
-                          (editMode ? 'Failed to update invoice' : 'Failed to create invoice');
+                          (editMode ? 'Failed to record payment' : 'Failed to create invoice');
       setError(errorMessage);
       console.error('API Error:', err.response?.data || err.message);
     } finally {
@@ -387,12 +363,7 @@ const CreateInvoiceModal = ({
     return unit?.apartment_unit_name || `Unit ${unit?.id || 'N/A'}`;
   };
 
-  const getTenantName = (uuid) => {
-    const tenant = tenants.find(t => t.uuid === uuid);
-    return tenant ? `${tenant.first_name} ${tenant.last_name}` : 'Unknown Tenant';
-  };
-
-  // Calculate total amount
+  // Calculate total amount for create mode
   const totalAmount = formData.fee_amount.reduce((sum, amount) => sum + amount, 0);
 
   if (loadingData) {
@@ -400,7 +371,7 @@ const CreateInvoiceModal = ({
       <Modal show={show} onHide={handleClose} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
-            {editMode ? 'Edit Invoice' : 'Create New Invoice'}
+            {editMode ? 'Record Payment' : 'Create New Invoice'}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="text-center py-4">
@@ -412,11 +383,11 @@ const CreateInvoiceModal = ({
   }
 
   return (
-    <Modal show={show} onHide={handleClose} centered size="xl">
+    <Modal show={show} onHide={handleClose} centered size={editMode ? 'md' : 'xl'}>
       <Modal.Header closeButton>
         <Modal.Title>
-          <IconifyIcon icon={editMode ? "bx:edit" : "bi:plus"} className="me-2" />
-          {editMode ? 'Edit Invoice' : 'Create New Invoice'}
+          <IconifyIcon icon={editMode ? "bx:wallet" : "bi:plus"} className="me-2" />
+          {editMode ? 'Record Tenant Payment' : 'Create New Invoice'}
         </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
@@ -431,68 +402,55 @@ const CreateInvoiceModal = ({
           {success && (
             <Alert variant="success">
               <IconifyIcon icon="bx:check-circle" className="me-2" />
-              {editMode ? 'Invoice updated successfully!' : 'Invoice created successfully!'}
+              {editMode ? 'Payment recorded successfully!' : 'Invoice created successfully!'}
             </Alert>
           )}
 
           {editMode && invoiceToEdit ? (
-            // Edit mode - only show invoice_status update
-            <Row>
-              {/* <Col xs={12}>
-                <div className="mb-3 p-3 bg-light rounded">
-                  <h6 className="mb-2">Invoice Details</h6>
-                  <p className="mb-1"><strong>Invoice ID:</strong> {invoiceToEdit.uuid}</p>
-                  <p className="mb-1"><strong>Customer:</strong> {invoiceToEdit.user?.first_name} {invoiceToEdit.user?.last_name}</p>
-                  <p className="mb-1"><strong>Apartment:</strong> {invoiceToEdit.apartment_unit?.apartment?.name} - {invoiceToEdit.apartment_unit?.apartment_unit_name}</p>
-                  <p className="mb-0"><strong>Current invoice_Status:</strong> <span className={`badge bg-${invoiceToEdit.invoice_status === 'completed' ? 'success' : invoiceToEdit.invoice_status === 'cancelled' ? 'danger' : 'warning'}`}>{invoiceToEdit.invoice_status || 'pending'}</span></p>
-                </div>
-              </Col> */}
-              <Col xs={12}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Update status *</Form.Label>
-                  <Form.Select
-                    name="invoice_status"
-                    value={formData.invoice_status || ''}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">Select status</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    Current status: <strong>{formData.invoice_status || 'pending'}</strong>
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-          ) : (
-            // Create mode - show full form
+            // Payment mode - record a part or full payment towards the invoice
             <>
+              <div className="bg-light rounded p-3 mb-3">
+                <Row className="text-center">
+                  <Col xs={4}>
+                    <div className="text-muted small">Invoice Total</div>
+                    <div className="fw-semibold">₦{invoiceTotal.toFixed(2)}</div>
+                  </Col>
+                  <Col xs={4}>
+                    <div className="text-muted small">Paid So Far</div>
+                    <div className="fw-semibold text-success">₦{amountPaidSoFar.toFixed(2)}</div>
+                  </Col>
+                  <Col xs={4}>
+                    <div className="text-muted small">Balance Remaining</div>
+                    <div className="fw-semibold text-danger">₦{balanceRemaining.toFixed(2)}</div>
+                  </Col>
+                </Row>
+              </div>
+
               <Row>
-                <Col md={6}>
+                <Col xs={12}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tenant *</Form.Label>
-                    <Form.Select
-                      name="user_uuid"
-                      value={formData.user_uuid}
+                    <Form.Label>Amount Paid by Tenant *</Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="payment_amount"
+                      min="0"
+                      step="0.01"
+                      value={formData.payment_amount}
                       onChange={handleChange}
                       required
                       disabled={loading}
-                    >
-                      <option value="">Select Tenant</option>
-                      {tenants.map(tenant => (
-                        <option key={tenant.uuid} value={tenant.uuid}>
-                          {tenant.first_name} {tenant.last_name} ({tenant.email})
-                        </option>
-                      ))}
-                    </Form.Select>
+                      placeholder="Enter the amount the tenant is paying now"
+                    />
+                    <Form.Text className="text-muted">
+                      This is a single payment towards the invoice. It doesn't have to cover the full balance — partial payments are supported.
+                    </Form.Text>
                   </Form.Group>
                 </Col>
               </Row>
-
+            </>
+          ) : (
+            // Create mode - show full form
+            <>
               <h6 className="mb-3">Apartment Selection</h6>
               
               {/* Level 1: Category Selection */}
@@ -507,7 +465,7 @@ const CreateInvoiceModal = ({
                       disabled={loading}
                     >
                       <option value="">Select Category</option>
-                      {categories.map((category, index) => (
+                      {Array.isArray(categories) && categories.map((category, index) => (
                         <option key={index} value={index}>
                           {getCategoryName(category)}
                           {category.apartments && ` (${category.apartments.length} apartments)`}
@@ -532,7 +490,6 @@ const CreateInvoiceModal = ({
                         {apartmentsInCategory.map((apartment, index) => (
                           <option key={index} value={index}>
                             {getApartmentName(apartment)}
-                            {apartment.apartment_units && ` (${apartment.apartment_units.length} units)`}
                           </option>
                         ))}
                       </Form.Select>
@@ -540,29 +497,42 @@ const CreateInvoiceModal = ({
                   </Col>
                 )}
 
-                {/* Level 3: Unit Selection */}
+                {/* Level 3: Unit Selection - multi-select checkboxes */}
                 {selectedApartment && (
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Apartment Unit *</Form.Label>
-                      <Form.Select
-                        value={selectedUnit ? unitsInApartment.indexOf(selectedUnit) : ''}
-                        onChange={handleUnitChange}
-                        required
-                        disabled={loading || unitsInApartment.length === 0}
-                      >
-                        <option value="">Select Unit</option>
-                        {unitsInApartment.map((unit, index) => (
-                          <option key={index} value={index}>
-                            {getUnitDisplayName(unit)}
-                          </option>
-                        ))}
-                      </Form.Select>
-                      {unitsInApartment.length === 0 && (
-                        <Form.Text className="text-warning">
+                      <Form.Label>Apartment Units *</Form.Label>
+                      {unitsLoading ? (
+                        <div className="d-flex align-items-center gap-2 text-muted">
+                          <Spinner animation="border" size="sm" />
+                          Loading units...
+                        </div>
+                      ) : unitsInApartment.length > 0 ? (
+                        <div
+                          className="border rounded p-2"
+                          style={{ maxHeight: '180px', overflowY: 'auto' }}
+                        >
+                          {unitsInApartment.map((unit, index) => (
+                            <Form.Check
+                              key={unit.uuid || index}
+                              type="checkbox"
+                              id={`unit-${unit.uuid || index}`}
+                              label={getUnitDisplayName(unit)}
+                              checked={formData.apartment_unit_uuid.includes(unit.uuid)}
+                              onChange={() => handleUnitToggle(unit)}
+                              disabled={loading}
+                              className="mb-1"
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <Form.Text className="text-warning d-block">
                           No units available for this apartment
                         </Form.Text>
                       )}
+                      <Form.Text className="text-muted">
+                        {formData.apartment_unit_uuid.length} unit(s) selected
+                      </Form.Text>
                     </Form.Group>
                   </Col>
                 )}
@@ -583,8 +553,7 @@ const CreateInvoiceModal = ({
                       <thead className="bg-light">
                         <tr>
                           <th>Fee Purpose</th>
-                          <th width="200">Amount ($)</th>
-                          <th width="80">Action</th>
+                          <th width="200">Amount (₦)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -611,18 +580,6 @@ const CreateInvoiceModal = ({
                                 disabled={loading}
                               />
                             </td>
-                            <td className="text-center">
-                              {formData.fee_name.length > 1 && (
-                                <Button
-                                  variant="outline-danger"
-                                  size="sm"
-                                  onClick={() => removeFeeItem(index)}
-                                  disabled={loading}
-                                >
-                                  <IconifyIcon icon="bx:trash" />
-                                </Button>
-                              )}
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -630,7 +587,6 @@ const CreateInvoiceModal = ({
                         <tr>
                           <td className="text-end"><strong>Total Amount:</strong></td>
                           <td><strong>${totalAmount.toFixed(2)}</strong></td>
-                          <td></td>
                         </tr>
                       </tfoot>
                     </table>
@@ -656,12 +612,12 @@ const CreateInvoiceModal = ({
             {loading ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
-                {editMode ? 'Updating...' : 'Creating...'}
+                {editMode ? 'Recording...' : 'Creating...'}
               </>
             ) : (
               <>
-                <IconifyIcon icon={editMode ? "bx:save" : "bi:plus"} className="me-2" />
-                {editMode ? 'Update Invoice' : 'Create Invoice'}
+                <IconifyIcon icon={editMode ? "bx:wallet" : "bi:plus"} className="me-2" />
+                {editMode ? 'Record Payment' : 'Create Invoice'}
               </>
             )}
           </Button>
@@ -672,6 +628,3 @@ const CreateInvoiceModal = ({
 };
 
 export default CreateInvoiceModal;
-
-
-

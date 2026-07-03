@@ -2,7 +2,7 @@ import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import { Card, Badge } from 'react-bootstrap';
 import { currency } from '@/context/constants';
 
-const InvoicesListView = ({ invoices, onEditClick, onViewClick }) => {
+const InvoicesListView = ({ invoices, onEditClick, onChangeStatusClick, onViewClick }) => {
   const getStatusVariant = (status) => {
     switch (status?.toLowerCase()) {
       case 'paid': 
@@ -43,6 +43,16 @@ const InvoicesListView = ({ invoices, onEditClick, onViewClick }) => {
     return `${invoice.first_name || ''} ${invoice.last_name || ''}`.trim() || 'N/A';
   };
 
+  const canEditInvoice = (invoice) => {
+    return invoice.invoice_status?.toLowerCase() === 'pending';
+  };
+
+  const canCancelInvoice = (invoice) => {
+    const isPending = invoice.invoice_status?.toLowerCase() === 'pending';
+    const noPaymentMade = !parseFloat(invoice.total_paid || 0);
+    return isPending && noPaymentMade;
+  };
+
   return (
     <Card className="overflow-hidden mt-3">
       <div className="table-responsive">
@@ -52,12 +62,11 @@ const InvoicesListView = ({ invoices, onEditClick, onViewClick }) => {
               <th>S/N</th>
               {/* <th>Invoice UUID</th> */}
               <th>Customer</th>
-              <th>Email</th>
               <th>Apartment Unit</th>
               <th>Apartment</th>
               <th>Amount</th>
+              <th>Amount Paid</th>
               <th>Status</th>
-              {/* <th>Created Date</th> */}
               <th>Actions</th>
             </tr>
           </thead>
@@ -78,9 +87,6 @@ const InvoicesListView = ({ invoices, onEditClick, onViewClick }) => {
                   </div>
                 </td>
                 <td>
-                  <span className="text-muted">{invoice.user_email || 'N/A'}</span>
-                </td>
-                <td>
                   <span className="fw-semibold">{invoice.apartment_unit_name || 'N/A'}</span>
                 </td>
                 <td>
@@ -92,6 +98,9 @@ const InvoicesListView = ({ invoices, onEditClick, onViewClick }) => {
                 </td>
                 <td>
                   <span className="fw-semibold">{currency}{parseFloat(invoice.invoice_amount || 0).toFixed(2)}</span>
+                </td>
+                <td>
+                  <span className="fw-semibold">{currency}{parseFloat(invoice.total_paid || 0).toFixed(2)}</span>
                 </td>
                 <td>
                   <Badge bg={getStatusVariant(invoice.invoice_status)}>
@@ -112,13 +121,24 @@ const InvoicesListView = ({ invoices, onEditClick, onViewClick }) => {
                     >
                       <IconifyIcon icon="bx:show" />
                     </button>
-                    <button 
-                      className="btn btn-sm btn-light"
-                      onClick={() => onEditClick(invoice)}
-                      title="Edit Invoice"
-                    >
-                      <IconifyIcon icon="bx:edit" />
-                    </button>
+                    {canEditInvoice(invoice) && (
+                      <button 
+                        className="btn btn-sm btn-light"
+                        onClick={() => onEditClick(invoice)}
+                        title="Edit Invoice Amount"
+                      >
+                        <IconifyIcon icon="bx:edit" />
+                      </button>
+                    )}
+                    {canCancelInvoice(invoice) && (
+                      <button 
+                        className="btn btn-sm btn-light text-danger"
+                        onClick={() => onChangeStatusClick(invoice)}
+                        title="Cancel Invoice"
+                      >
+                        <IconifyIcon icon="bx:x-circle" />
+                      </button>
+                    )}
                     {/* <button 
                       className="btn btn-sm btn-light text-danger"
                       onClick={() => onDeleteClick(invoice)}

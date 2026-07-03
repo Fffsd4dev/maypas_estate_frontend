@@ -36,7 +36,7 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
     if (!invoiceRef.current) return
 
     const element = invoiceRef.current
-    const invoiceNumber = invoice.invoice_number || (invoice.uuid ? invoice.uuid.slice(0, 8).toUpperCase() : 'invoice')
+    const invoiceNumber = invoice.invoice_number || invoice.uuid || 'invoice'
     
     const opt = {
       margin: [0.5, 0.5, 0.5, 0.5],
@@ -86,21 +86,37 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
     }).format(numAmount)
   }
 
+  // Line items from payment_infos, falling back to a single row built from invoice.amount
+  const lineItems = invoice.payment_infos?.length
+    ? invoice.payment_infos.map((payment) => ({
+        description: payment.payment_name || 'Charge',
+        amount: parseFloat(payment.payment_fee || 0),
+      }))
+    : (invoice.amount ? [{ description: 'Rental Charges', amount: parseFloat(invoice.amount) }] : [])
+
   // Calculate totals
-  const subtotal = invoice.payment_infos?.length 
-    ? invoice.payment_infos.reduce((sum, payment) => sum + parseFloat(payment.payment_fee || 0), 0)
-    : (invoice.amount ? parseFloat(invoice.amount) : null)
-  
+  const subtotal = lineItems.length
+    ? lineItems.reduce((sum, item) => sum + item.amount, 0)
+    : null
+
   const total = subtotal
   const vat = 0
   const grandTotal = total + vat
+
+  // Payment history + outstanding balance
+  const paymentHistories = Array.isArray(invoice.payment_histories) ? invoice.payment_histories : []
+  const amountPaid = invoice.amount_paid !== undefined && invoice.amount_paid !== null
+    ? parseFloat(invoice.amount_paid)
+    : paymentHistories.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  const balanceDue = grandTotal - amountPaid
 
   // Invoice dates
   const invoiceDate = formatDate(invoice.created_at) || formatDate(new Date().toISOString())
   const dueDate = invoiceDate
 
-  // Generate invoice number
-  const invoiceNumber = invoice.invoice_number || (invoice.uuid ? invoice.uuid.slice(0, 8).toUpperCase() : 'INV-001')
+  // Invoice number — invoice.uuid is already a formatted invoice number (e.g. INV-20260701-MSQU84),
+  // not a raw UUID, so it's used as-is rather than sliced.
+  const invoiceNumber = invoice.invoice_number || invoice.uuid || 'INV-001'
 
   // Get customer information
   const customerName = invoice.user ? 
@@ -117,10 +133,6 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
   const apartmentName = invoice.apartment_unit?.apartment_unit_name || 'Unit'
   const buildingName = invoice.apartment_unit?.apartment?.name || 'Apartment'
   const customerAddress = `${apartmentName} - ${buildingName}, ${locationName}`
-
-  // Service description
-  const serviceDescription = invoice.payment_infos?.[0]?.payment_name || 'Rental Charges'
-  const serviceDetails = `Monthly rental charge for ${apartmentName} in ${buildingName}`
 
   // Get status badge color
   const getStatusBadge = () => {
@@ -458,8 +470,8 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
                 <div className="info-value">{dueDate}</div>
               </div>
               <div className="info-card">
-                <div className="info-label">Amount Due</div>
-                <div className="info-value-large" style={{ color: primaryColor }}>{formatCurrency(total)}</div>
+                <div className="info-label">Balance Due</div>
+                <div className="info-value-large" style={{ color: primaryColor }}>{formatCurrency(balanceDue)}</div>
               </div>
             </div>
 
@@ -475,7 +487,7 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
             </div>
 
             {/* Services Table */}
-            {subtotal && (
+            {lineItems.length > 0 && (
               <>
                 <div className="section-title">Services Rendered</div>
                 <table className="table-modern">
@@ -488,22 +500,23 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{serviceDescription}</div>
-                        <div className="service-description">{serviceDetails}</div>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>1</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(subtotal)}</td>
-                      <td style={{ textAlign: 'right' }}>{formatCurrency(subtotal)}</td>
-                    </tr>
+                    {lineItems.map((item, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <div style={{ fontWeight: 500 }}>{item.description}</div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>1</td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.amount)}</td>
+                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.amount)}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </>
             )}
 
             {/* Totals Section */}
-            {subtotal && (
+            {subtotal !== null && (
               <div className="totals-modern">
                 <div className="total-row-modern">
                   <span className="total-label-modern">Subtotal</span>
@@ -517,11 +530,42 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
                   <span className="total-label-modern">VAT (0%)</span>
                   <span className="total-value-modern">{formatCurrency(vat)}</span>
                 </div>
+                {amountPaid > 0 && (
+                  <div className="total-row-modern">
+                    <span className="total-label-modern">Amount Paid</span>
+                    <span className="total-value-modern" style={{ color: '#28a745' }}>-{formatCurrency(amountPaid)}</span>
+                  </div>
+                )}
                 <div className="total-row-modern grand-total">
-                  <span className="total-label-modern">Total Due</span>
-                  <span className="total-value-modern" style={{ color: primaryColor }}>{formatCurrency(grandTotal)}</span>
+                  <span className="total-label-modern">Balance Due</span>
+                  <span className="total-value-modern" style={{ color: primaryColor }}>{formatCurrency(balanceDue)}</span>
                 </div>
               </div>
+            )}
+
+            {/* Payment History */}
+            {paymentHistories.length > 0 && (
+              <>
+                <div className="section-title" style={{ marginTop: '30px' }}>Payment History</div>
+                <table className="table-modern">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '70%' }}>Date</th>
+                      <th style={{ width: '30%', textAlign: 'right' }}>Amount Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentHistories.map((payment, idx) => (
+                      <tr key={idx}>
+                        <td>{formatDate(payment.created_at)}</td>
+                        <td style={{ textAlign: 'right', color: '#28a745', fontWeight: 500 }}>
+                          {formatCurrency(payment.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )}
 
             {/* Notes Section */}
@@ -544,14 +588,14 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
       {/* Action Buttons */}
       <div className="d-print-none mt-4">
         <div className="d-flex justify-content-end gap-3">
-          <button 
+          {/* <button 
             onClick={() => window.print()} 
             className="btn btn-outline-secondary btn-custom"
             style={{ borderColor: '#dee2e6' }}
           >
             <i className="bx bxs-printer me-2"></i>
             Print Invoice
-          </button>
+          </button> */}
           <button 
             onClick={handleDownloadPDF} 
             className="btn btn-primary-custom btn-custom"
@@ -569,6 +613,3 @@ const InvoiceDetailView = ({ invoice, brandData }) => {
 }
 
 export default InvoiceDetailView;
-
-
-
