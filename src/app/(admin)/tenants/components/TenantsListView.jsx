@@ -79,3 +79,6 @@ const TenantsListView = ({ tenants, onEditClick, onDeleteClick }) => {
 };
 
 export default TenantsListView;
+
+
+

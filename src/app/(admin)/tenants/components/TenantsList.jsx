@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Card, CardBody, Col, Row, Modal, Button, Alert, Spinner } from 'react-bootstrap';
+import { Card, CardBody, Col, Row, Modal, Button, Alert, Spinner, Pagination } from 'react-bootstrap';
 import IconifyIcon from '@/components/wrappers/IconifyIcon';
 import TenantsListView from './TenantsListView';
 import CreateTenantsModal from './CreateTenantsModal';
 import { useAuthContext } from '@/context/useAuthContext';
 import axios from 'axios';
 
-const TenantsList = ({ tenants, refreshTenants, tenantSlug }) => {
+const TenantsList = ({ tenants, refreshTenants, tenantSlug, pagination, onPageChange }) => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -54,9 +54,6 @@ const TenantsList = ({ tenants, refreshTenants, tenantSlug }) => {
       await axios.delete(
         `${import.meta.env.VITE_BACKEND_URL}/api/${tenantSlug}/tenant/delete/${selectedTenant.uuid}`,
         {
-          // data: {
-          //   uuid: selectedTenant.uuid,
-          // },
           headers: {
             'Authorization': `Bearer ${user.token}`,
             'Content-Type': 'application/json',
@@ -134,6 +131,33 @@ const TenantsList = ({ tenants, refreshTenants, tenantSlug }) => {
         />
       ) : (
         <div className="alert alert-info mt-3">No tenants found</div>
+      )}
+
+      {pagination && pagination.lastPage > 1 && !searchTerm && (
+        <div className="d-flex justify-content-between align-items-center mt-3">
+          <span className="text-muted">
+            Page {pagination.currentPage} of {pagination.lastPage} ({pagination.total} total)
+          </span>
+          <Pagination className="mb-0">
+            <Pagination.Prev
+              disabled={pagination.currentPage === 1}
+              onClick={() => onPageChange(pagination.currentPage - 1)}
+            />
+            {Array.from({ length: pagination.lastPage }, (_, i) => i + 1).map((page) => (
+              <Pagination.Item
+                key={page}
+                active={page === pagination.currentPage}
+                onClick={() => onPageChange(page)}
+              >
+                {page}
+              </Pagination.Item>
+            ))}
+            <Pagination.Next
+              disabled={pagination.currentPage === pagination.lastPage}
+              onClick={() => onPageChange(pagination.currentPage + 1)}
+            />
+          </Pagination>
+        </div>
       )}
 
       <CreateTenantsModal 

@@ -98,7 +98,7 @@ const ResetPassForm = () => {
 
           if (tenantResponse.status === 200) {
             toast.success('Password reset successfully!');
-            navigate(`/${tenantSlug}/sign-in`);
+            navigate(`/${tenantSlug}/tenant-sign-in`);
           } else {
             toast.error(tenantResponse.data.message || 'Password reset failed');
           }
