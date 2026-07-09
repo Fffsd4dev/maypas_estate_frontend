@@ -36,7 +36,7 @@ const VerticalNavigationBar = () => {
       overflow: 'hidden'
     }}>
       <div className="logo-box" style={{ padding: '20px 24px', textAlign: 'center', flexShrink: 0 }}>
-        <a href="/" style={{ display: 'inline-block', textDecoration: 'none' }}>
+        <a href="" style={{ display: 'inline-block', textDecoration: 'none' }}>
           {logoUrl ? (
             <img
               src={logoUrl}

@@ -207,7 +207,7 @@
 // Sidenav Condensed
 html[data-menu-size='condensed'] {
     .main-nav {
-        position: absolute;
+        position: fixed;
         width: $main-nav-width-sm;
         min-width: $main-nav-width-sm;
 
@@ -379,7 +379,7 @@ html[data-menu-size='condensed'] {
 
     .page-content {
         margin-left: $main-nav-width-sm;
-        min-height: 1300px;
+        // min-height: 1300px;
     }
 }
 
